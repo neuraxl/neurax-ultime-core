@@ -1,14 +1,17 @@
-const express = require('express');
-const app = express();
-const port = 3000;
+const aedes = require('aedes')();
+const net = require('net');
 
-app.use(express.json());
+const server = net.createServer(aedes.handle);
+const port = 1883;
 
-app.post('/neuron', (req, res) => {
-  console.log('Neuron data received:', req.body);
-  res.send('Neuron data received');
+server.listen(port, function () {
+  console.log('Serveur MQTT Aedes démarré sur le port', port);
 });
 
-app.listen(port, () => {
-  console.log(API Server listening at http://localhost:${port});
+aedes.on('client', function (client) {
+  console.log('Client connecté', client.id);
+});
+
+aedes.on('publish', function (packet, client) {
+  console.log('Message publié:', packet.payload.toString());
 });
