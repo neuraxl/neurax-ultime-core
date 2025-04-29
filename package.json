@@ -1,0 +1,13 @@
+{
+  "name": "neurax-ultime",
+  "version": "1.0.0",
+  "description": "Cerveau central de NeuraX-ultime basé sur Aedes MQTT",
+  "main": "server/broker.js",
+  "scripts": {
+    "start": "node server/broker.js"
+  },
+  "dependencies": {
+    "aedes": "^0.42.1",
+    "mqtt": "^4.3.7"
+  }
+}
