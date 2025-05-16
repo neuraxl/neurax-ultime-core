@@ -1,3 +1,21 @@
+function createShootingStar() {
+  const star = document.createElement('div');
+  star.classList.add('shooting-star');
+  star.style.top = `${Math.random() * window.innerHeight * 0.5}px`;
+  star.style.left = `${Math.random() * window.innerWidth}px`;
+  document.body.appendChild(star);
+
+  setTimeout(() => {
+    star.remove();
+  }, 1000);
+}
+
+// Lancer une étoile filante toutes les 3 à 7 secondes
+setInterval(() => {
+  if (Math.random() > 0.5) {
+    createShootingStar();
+  }
+}, 3000 + Math.random() * 4000);
 const synth = window.speechSynthesis;
 let memory = [];
 
