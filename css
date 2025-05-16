@@ -1,3 +1,24 @@
+.shooting-star {
+  position: absolute;
+  width: 2px;
+  height: 80px;
+  background: linear-gradient(0deg, #00ffe1, transparent);
+  animation: shoot 1s ease-out forwards;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+@keyframes shoot {
+  0% {
+    transform: translate(0, 0) rotate(45deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-300px, 300px) rotate(45deg);
+    opacity: 0;
+  }
+}
 body {
   font-family: Arial, sans-serif;
   background: #0d0d0d;
