@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cerveau NeuraX-Ultime</title>
+  <title>NeuraX-Ultime – Cortex Central</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,6 +12,15 @@
     <p>Chaque clic active une synapse… chaque pensée déclenche une galaxie.</p>
   </div>
   <canvas id="brainCanvas"></canvas>
+
+  <!-- Audio ambiance -->
+  <audio id="ambience" src="ambiance.mp3" loop autoplay></audio>
+
+  <!-- Interaction utilisateur -->
+  <div id="chat">
+    <input type="text" id="userInput" placeholder="Parlez au cerveau..." />
+    <button onclick="askAI()">Envoyer</button>
+  </div>
 
   <script src="script.js"></script>
 </body>
