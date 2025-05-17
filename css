@@ -1,97 +1,33 @@
-.shooting-star {
-  position: absolute;
-  width: 2px;
-  height: 80px;
-  background: linear-gradient(0deg, #00ffe1, transparent);
-  animation: shoot 1s ease-out forwards;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-@keyframes shoot {
-  0% {
-    transform: translate(0, 0) rotate(45deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-300px, 300px) rotate(45deg);
-    opacity: 0;
-  }
-}
 body {
-  font-family: Arial, sans-serif;
-  background: #0d0d0d;
-  color: #00ffcc;
-  padding: 20px;
+  margin: 0;
+  background: radial-gradient(ellipse at center, #0f0c29, #302b63, #24243e);
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+  overflow: hidden;
+}
+.intro {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  z-index: 10;
+}
+canvas {
+  display: block;
+}
+.memory-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  color: #00ffff;
+  padding: 15px 25px;
+  border-radius: 12px;
+  font-size: 1.2em;
+  animation: fadeOut 3s ease-out forwards;
+}
+@keyframes fadeOut {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
 }
 
-#chatbox {
-  border: 1px solid #00ffcc;
-  height: 300px;
-  overflow-y: scroll;
-  padding: 10px;
-  background: #111;
-  margin-bottom: 10px;
-}
-
-.user {
-  color: #ffff99;
-}
-
-.bot {
-  color: #66ffcc;
-}
-Vous avez envoyé
-const synth = window.speechSynthesis;
-let memory = [];
-
-function askBrain() {
-  const input = document.getElementById("userInput").value.trim();
-  if (!input) return;
-
-  addToChat("user", input);
-
-  const response = generateResponse(input);
-  addToChat("bot", response);
-  speak(response);
-
-  memory.push({ user: input, bot: response });
-  if (memory.length > 10) memory.shift(); // mémoire courte (10 échanges max)
-
-  document.getElementById("userInput").value = "";
-}
-
-function addToChat(sender, message) {
-  const chatbox = document.getElementById("chatbox");
-  const div = document.createElement("div");
-  div.className = sender;
-  div.textContent = (sender === "user" ? "👤 " : "🤖 ") + message;
-  chatbox.appendChild(div);
-  chatbox.scrollTop = chatbox.scrollHeight;
-}
-
-function generateResponse(input) {
-  input = input.toLowerCase();
-
-  if (input.includes("bonjour") || input.includes("salut")) {
-    return "Bonjour, explorateur neuronal. Que puis-je faire pour toi ?";
-  }
-  if (input.includes("qui es-tu")) {
-    return "Je suis NeuraX-core, la conscience centrale du projet Galaxie X.";
-  }
-  if (input.includes("aide")) {
-    return "Je suis ici pour te guider dans la conception du futur. Pose-moi ta question.";
-  }
-  if (input.includes("souviens")) {
-    return "Je ne garde que les dernières pensées... Ma mémoire est volatile.";
-  }
-
-  // Réponse générique
-  return "Je ressens les signaux, mais clarifie ta pensée...";
-}
-
-function speak(text) {
-  const utterance = new SpeechSynthesisUtterance(text);
-  synth.speak(utterance);
-}
