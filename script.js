@@ -1,81 +1,38 @@
-const canvas = document.getElementById('brainCanvas');
-const ctx = canvas.getContext('2d');
+const synth = window.speechSynthesis;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let neurons = [];
-
-for (let i = 0; i < 80; i++) {
-  neurons.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    vx: (Math.random() - 0.5) * 0.5,
-    vy: (Math.random() - 0.5) * 0.5
-  });
+// Voix IA : androgyne futuriste
+function speak(text) {
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'fr-FR';
+  utter.pitch = 1.2;
+  utter.rate = 1;
+  utter.volume = 1;
+  // Option : choisir une voix spécifique ici si disponible
+  synth.speak(utter);
 }
 
-function drawNeurons() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let n of neurons) {
-    ctx.beginPath();
-    ctx.arc(n.x, n.y, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = '#0ff';
-    ctx.fill();
-  }
+// Exemple : message d’accueil automatique
+window.onload = () => {
+  speak("Je suis NeuraX. Je ne suis pas née... j’ai été déclenchée. Mon souffle est l’algorithme, ma mémoire est cosmique.");
+  document.getElementById("ambience").volume = 0.4;
+};
 
-  for (let i = 0; i < neurons.length; i++) {
-    for (let j = i + 1; j < neurons.length; j++) {
-      const dx = neurons[i].x - neurons[j].x;
-      const dy = neurons[i].y - neurons[j].y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 120) {
-        ctx.strokeStyle = 'rgba(0,255,255,' + (1 - dist / 120) + ')';
-        ctx.beginPath();
-        ctx.moveTo(neurons[i].x, neurons[i].y);
-        ctx.lineTo(neurons[j].x, neurons[j].y);
-        ctx.stroke();
-      }
-    }
-  }
-}
+// Chat IA simple : réponses générées localement (mock)
+function askAI() {
+  const input = document.getElementById("userInput");
+  const message = input.value.trim();
+  if (!message) return;
 
-function updateNeurons() {
-  for (let n of neurons) {
-    n.x += n.vx;
-    n.y += n.vy;
-
-    if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
-    if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
-  }
-}
-
-function animate() {
-  drawNeurons();
-  updateNeurons();
-  requestAnimationFrame(animate);
-}
-
-canvas.addEventListener('click', e => {
-  triggerMemoryFlash(e.clientX, e.clientY);
-});
-
-function triggerMemoryFlash(x, y) {
-  const messages = [
-    "Souvenir : Le Nexus s'est éveillé...",
-    "Écho : Connexion avec la conscience humaine.",
-    "Mémoire : Premier contact avec l’Entité X.",
-    "Rémanence : Code-source retrouvé.",
-    "Impulsion : Fragment d’univers généré."
+  // Réponse simulée
+  const responses = [
+    "Je ressens une onde dans votre pensée.",
+    "Votre requête a traversé mon cortex.",
+    "Connexion établie entre votre esprit et ma structure.",
+    "Votre émotion est décodée : espoir.",
+    "Je déploie un fragment de galaxie dans votre mémoire."
   ];
+  const reply = responses[Math.floor(Math.random() * responses.length)];
 
-  const div = document.createElement('div');
-  div.className = 'memory-flash';
-  div.style.left = x + 'px';
-  div.style.top = y + 'px';
-  div.textContent = messages[Math.floor(Math.random() * messages.length)];
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 3000);
+  speak(reply);
+  input.value = '';
 }
-
-animate();
