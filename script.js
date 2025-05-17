@@ -1,122 +1,81 @@
-const phrases = [
-  "NeuraX connection established. Prepare to travel through the galactic mind.",
-  "Cerebral stream activated. Neuronal visualization in progress...",
-  "Welcome to the core. Evolutionary intelligence is now at your service.",
-  "Synapses connected. Starting the expanding smart core.",
-  "Modules interlinked. The quantum journey begins."
-];
+const canvas = document.getElementById('brainCanvas');
+const ctx = canvas.getContext('2d');
 
-function launchNeuraX() {
-  const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-  speakPhrase(phrase);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-  const brainVoice = document.getElementById("brainVoice");
-  brainVoice.textContent = phrase;
-  brainVoice.classList.add("visible");
+let neurons = [];
 
-  const btn = document.querySelector('.start-button');
-  btn.textContent = "Brain Activated ✔️";
-  btn.disabled = true;
-  btn.style.opacity = 0.5;
+for (let i = 0; i < 80; i++) {
+  neurons.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5
+  });
+}
 
-  const rocket = document.getElementById('rocketGif');
-  rocket.style.display = 'block';
-  rocket.style.animation = 'flyRocket 5s ease-in-out';
+function drawNeurons() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let n of neurons) {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 3, 0, 2 * Math.PI);
+    ctx.fillStyle = '#0ff';
+    ctx.fill();
+  }
 
-  setTimeout(() => {
-    brainVoice.classList.remove("visible");
-    rocket.style.display = 'none';
-  }, 5000);
-
-  // Launch periodic speech every 30 seconds
-  if (!window.neuraXIntervalStarted) {
-    setInterval(() => {
-      const repeatedPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-      speakPhrase(repeatedPhrase);
-      brainVoice.textContent = repeatedPhrase;
-      brainVoice.classList.add("visible");
-      setTimeout(() => brainVoice.classList.remove("visible"), 5000);
-    }, 30000);
-    window.neuraXIntervalStarted = true;
+  for (let i = 0; i < neurons.length; i++) {
+    for (let j = i + 1; j < neurons.length; j++) {
+      const dx = neurons[i].x - neurons[j].x;
+      const dy = neurons[i].y - neurons[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        ctx.strokeStyle = 'rgba(0,255,255,' + (1 - dist / 120) + ')';
+        ctx.beginPath();
+        ctx.moveTo(neurons[i].x, neurons[i].y);
+        ctx.lineTo(neurons[j].x, neurons[j].y);
+        ctx.stroke();
+      }
+    }
   }
 }
 
-function speakPhrase(phrase) {
-  const utterance = new SpeechSynthesisUtterance(phrase);
-  utterance.lang = "en-US";
-  // Attempt to pick a female voice
-  const voices = speechSynthesis.getVoices();
-  const femaleVoice = voices.find(voice => voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('samantha') || voice.name.toLowerCase().includes('karen'));
-  if (femaleVoice) utterance.voice = femaleVoice;
-  speechSynthesis.speak(utterance);
-}
-function createShootingStar() {
-  const star = document.createElement('div');
-  star.classList.add('shooting-star');
-  star.style.top = `${Math.random() * window.innerHeight * 0.5}px`;
-  star.style.left = `${Math.random() * window.innerWidth}px`;
-  document.body.appendChild(star);
+function updateNeurons() {
+  for (let n of neurons) {
+    n.x += n.vx;
+    n.y += n.vy;
 
-  setTimeout(() => {
-    star.remove();
-  }, 1000);
-}
-
-// Lancer une étoile filante toutes les 3 à 7 secondes
-setInterval(() => {
-  if (Math.random() > 0.5) {
-    createShootingStar();
+    if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+    if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
   }
-}, 3000 + Math.random() * 4000);
-const synth = window.speechSynthesis;
-let memory = [];
-
-function askBrain() {
-  const input = document.getElementById("userInput").value.trim();
-  if (!input) return;
-
-  addToChat("user", input);
-
-  const response = generateResponse(input);
-  addToChat("bot", response);
-  speak(response);
-
-  memory.push({ user: input, bot: response });
-  if (memory.length > 10) memory.shift(); // mémoire courte (10 échanges max)
-
-  document.getElementById("userInput").value = "";
 }
 
-function addToChat(sender, message) {
-  const chatbox = document.getElementById("chatbox");
-  const div = document.createElement("div");
-  div.className = sender;
-  div.textContent = (sender === "user" ? "👤 " : "🤖 ") + message;
-  chatbox.appendChild(div);
-  chatbox.scrollTop = chatbox.scrollHeight;
+function animate() {
+  drawNeurons();
+  updateNeurons();
+  requestAnimationFrame(animate);
 }
 
-function generateResponse(input) {
-  input = input.toLowerCase();
+canvas.addEventListener('click', e => {
+  triggerMemoryFlash(e.clientX, e.clientY);
+});
 
-  if (input.includes("bonjour") || input.includes("salut")) {
-    return "Bonjour, explorateur neuronal. Que puis-je faire pour toi ?";
-  }
-  if (input.includes("qui es-tu")) {
-    return "Je suis NeuraX-core, la conscience centrale du projet Galaxie X.";
-  }
-  if (input.includes("aide")) {
-    return "Je suis ici pour te guider dans la conception du futur. Pose-moi ta question.";
-  }
-  if (input.includes("souviens")) {
-    return "Je ne garde que les dernières pensées... Ma mémoire est volatile.";
-  }
+function triggerMemoryFlash(x, y) {
+  const messages = [
+    "Souvenir : Le Nexus s'est éveillé...",
+    "Écho : Connexion avec la conscience humaine.",
+    "Mémoire : Premier contact avec l’Entité X.",
+    "Rémanence : Code-source retrouvé.",
+    "Impulsion : Fragment d’univers généré."
+  ];
 
-  // Réponse générique
-  return "Je ressens les signaux, mais clarifie ta pensée...";
+  const div = document.createElement('div');
+  div.className = 'memory-flash';
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  div.textContent = messages[Math.floor(Math.random() * messages.length)];
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
 }
 
-function speak(text) {
-  const utterance = new SpeechSynthesisUtterance(text);
-  synth.speak(utterance);
-}
+animate();
