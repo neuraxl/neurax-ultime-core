@@ -1,3 +1,45 @@
+async function askAI() {
+    let userInput = document.getElementById("userInput").value;
+    let responseText = "Je réfléchis...";
+
+    document.getElementById("response").innerText = responseText;
+
+    let response = await fetch("https://api.openai.com/v1/completions", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer YOUR_API_KEY", // Remplace par ta clé API
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: "text-davinci-003", // Remplace par le bon modèle si nécessaire
+            prompt: userInput,
+            max_tokens: 150
+        })
+    });
+
+    let data = await response.json();
+    responseText = data.choices[0].text;
+    document.getElementById("response").innerText = responseText;
+
+    // Parole synthétique de la réponse
+    const utterance = new SpeechSynthesisUtterance(responseText);
+    utterance.lang = "fr-FR";
+    speechSynthesis.speak(utterance);
+}
+
+// Reconnaissance vocale
+window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = 'fr-FR';
+
+recognition.onresult = (event) => {
+    document.getElementById("userInput").value = event.results[0][0].transcript;
+    askAI();
+};
+
+document.getElementById("voiceButton").addEventListener("click", () => {
+    recognition.start();
+});
 fetch('https://neuraX-backend.io/core/activate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
