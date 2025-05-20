@@ -1,3 +1,12 @@
+function changeMode() {
+    let hours = new Date().getHours();
+    if (hours > 18) {
+        document.body.classList.add("dark-mode");
+    } else {
+        document.body.classList.remove("dark-mode");
+    }
+}
+window.onload = changeMode;
 async function askAI() {
     let userInput = document.getElementById("userInput").value;
     let responseText = "Je réfléchis...";
