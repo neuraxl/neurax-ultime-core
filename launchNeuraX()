@@ -1,0 +1,4 @@
+setInterval(() => {
+  brainState.stats.activations++;
+  draw(); // ou toute animation cérébrale
+}, 5000);
