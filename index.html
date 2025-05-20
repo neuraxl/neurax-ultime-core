@@ -180,6 +180,190 @@
       win.document.close();
     }
   </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NeuraX-Ultime</title>
+  <style>
+    body {
+      margin: 0; overflow: hidden;
+      background: #0a0a0a; color: #00ffe1;
+      font-family: 'Orbitron', sans-serif;
+    }
+    canvas {
+      position: absolute; top: 0; left: 0; z-index: 0;
+    }
+    .dashboard {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100vh; padding: 2em; text-align: center;
+    }
+    .start-button {
+      margin-top: 2em; padding: 1em 2em;
+      font-size: 1.2em; background: transparent;
+      border: 2px solid #00ffe1; color: #00ffe1;
+      text-shadow: 0 0 5px #00ffe1;
+      border-radius: 12px; cursor: pointer;
+      animation: fadeIn 3s ease-in-out forwards, pulse 2s infinite;
+      transition: background 0.3s, color 0.3s, transform 0.2s;
+      box-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
+    }
+    .start-button:hover {
+      background: #00ffe1; color: #000; transform: scale(1.05);
+    }
+    .functions {
+      margin-top: 2em; max-width: 400px; text-align: left;
+    }
+    .functions li {
+      margin-bottom: 0.5em; list-style: none;
+    }
+    .functions li::before {
+      content: '🧠'; margin-right: 0.5em;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 10px #00ffe1; }
+      50% { box-shadow: 0 0 20px #00ffe1; }
+    }
+    #universe {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 2; display: flex; flex-wrap: wrap;
+      justify-content: center; align-items: center;
+      gap: 2em; padding: 2em;
+    }
+    .galaxy, .planet {
+      width: 100px; height: 100px;
+      background: radial-gradient(circle, #00ffe1, #005555);
+      border-radius: 50%; cursor: pointer;
+      display: flex; justify-content: center; align-items: center;
+      box-shadow: 0 0 20px #00ffe1;
+      text-align: center;
+      transition: transform 0.5s, opacity 0.5s;
+    }
+    .zoomed { transform: scale(2); z-index: 3; }
+  </style>
+</head>
+<body>
+  <canvas id="neuralCanvas"></canvas>
+  <div class="dashboard">
+    <h1>🧠 NeuraX-Ultime</h1>
+    <p>Tableau de bord neuronal en temps réel</p>
+    <button class="start-button" onclick="launchNeuraX()">Activer le cerveau</button>
+    <ul class="functions">
+      <li>Auto-réplication neuronale</li>
+      <li>Sauvegarde JSON automatique</li>
+      <li>Statistiques du cerveau</li>
+      <li>Synthèse vocale intégrée</li>
+      <li>Interconnexion des modules</li>
+      <li>Connexion GPT-4 via API</li>
+      <li>Base de données neuronale évolutive</li>
+    </ul>
+  </div>
+  <div id="universe"></div>
+  <script>
+    const canvas = document.getElementById('neuralCanvas'), ctx = canvas.getContext('2d');
+    let w, h, brainState = { memory: [], stats: { activations: 0, queries: 0 } };
+    const nodes = Array.from({ length: 50 }, () => ({
+      x: Math.random() * innerWidth,
+      y: Math.random() * innerHeight,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5
+    }));
+
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        n1.x += n1.vx; n1.y += n1.vy;
+        if (n1.x < 0 || n1.x > w) n1.vx *= -1;
+        if (n1.y < 0 || n1.y > h) n1.vy *= -1;
+        ctx.beginPath(); ctx.arc(n1.x, n1.y, 2, 0, 2 * Math.PI);
+        ctx.fillStyle = '#00ffe1'; ctx.fill();
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n2 = nodes[j], dist = Math.hypot(n1.x - n2.x, n1.y - n2.y);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(n1.x, n1.y);
+            ctx.lineTo(n2.x, n2.y);
+            ctx.strokeStyle = 'rgba(0,255,225,0.1)';
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    function launchNeuraX() {
+      speechSynthesis.speak(new SpeechSynthesisUtterance("Connexion à NeuraX établie. Le système cérébral est opérationnel."));
+      brainState.stats.activations++;
+      localStorage.setItem('neural_state', JSON.stringify(brainState));
+      generateGalaxies(5);
+    }
+
+    function generateGalaxies(n) {
+      const u = document.getElementById('universe');
+      u.innerHTML = '';
+      for (let i = 1; i <= n; i++) {
+        const g = document.createElement('div');
+        g.className = 'galaxy'; g.textContent = '🌌 G' + i;
+        g.onclick = () => zoomToSystem(g, i);
+        u.appendChild(g);
+      }
+    }
+
+    function zoomToSystem(e, id) {
+      e.classList.add('zoomed');
+      setTimeout(() => {
+        const u = document.getElementById('universe');
+        u.innerHTML = '';
+        for (let i = 1; i <= 12; i++) {
+          const p = document.createElement('div');
+          p.className = 'planet'; p.textContent = '🪐 P' + i;
+          p.onclick = () => openCivilizationWindow(i);
+          u.appendChild(p);
+        }
+      }, 1000);
+    }
+
+    async function openCivilizationWindow(id) {
+      brainState.stats.queries++;
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer VOTRE_CLE_API'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [{ role: 'user', content: `Décris brièvement la civilisation sur la planète P${id}` }]
+        })
+      });
+      const j = await r.json();
+      localStorage.setItem('neural_state', JSON.stringify(brainState));
+      const win = window.open('', '', 'width=600,height=400');
+      win.document.write(`
+        <html><head><title>P${id}</title>
+        <style>body{font-family:sans-serif;background:#0a0a0a;color:#00ffe1;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}</style>
+        </head><body><div><h1>Civilisation de P${id}</h1><p>${j.choices[0].message.content}</p></div></body></html>`);
+      win.document.close();
+    }
+  </script>
   <script src="script.js"></script>
 <link rel="stylesheet" href="style.css">
 
