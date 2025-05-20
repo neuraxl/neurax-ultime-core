@@ -1,3 +1,8 @@
+fetch('https://neuraX-backend.io/core/activate', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(brainState)
+})
 function launchNeuraX() {
   const phrase = "Connexion à NeuraX établie. Le système cérébral est opérationnel.";
   const utterance = new SpeechSynthesisUtterance(phrase);
