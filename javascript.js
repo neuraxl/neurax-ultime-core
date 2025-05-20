@@ -1,3 +1,16 @@
+function parler(texte, langue = "fr-FR", voixNom = null) {
+  const utterance = new SpeechSynthesisUtterance(texte);
+  utterance.lang = langue;
+
+  // Si une voix spécifique est demandée
+  if (voixNom) {
+    const voixDisponibles = speechSynthesis.getVoices();
+    const voixChoisie = voixDisponibles.find(v => v.name.includes(voixNom));
+    if (voixChoisie) utterance.voice = voixChoisie;
+  }
+
+  speechSynthesis.speak(utterance);
+}
 async function openCivilizationWindow(planetId) {
   brainState.stats.queries++;
   const thought = await queryGPT(`Décris brièvement la civilisation sur la planète P${planetId}`);
