@@ -1,70 +1,29 @@
-function parler(texte, langue = "fr-FR", voixNom = null) {
-  const utterance = new SpeechSynthesisUtterance(texte);
-  utterance.lang = langue;
+async function askAI() {
+    let userInput = document.getElementById("userInput").value;
+    let responseText = "Je réfléchis...";
 
-  // Si une voix spécifique est demandée
-  if (voixNom) {
-    const voixDisponibles = speechSynthesis.getVoices();
-    const voixChoisie = voixDisponibles.find(v => v.name.includes(voixNom));
-    if (voixChoisie) utterance.voice = voixChoisie;
-  }
+    let response = await fetch("https://api.openai.com/v1/completions", {
+        method: "POST",
+        headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "gpt-4", prompt: userInput })
+    });
 
-  speechSynthesis.speak(utterance);
+    let data = await response.json();
+    responseText = data.choices[0].text;
+
+    document.getElementById("response").innerText = responseText;
 }
-async function openCivilizationWindow(planetId) {
-  brainState.stats.queries++;
-  const thought = await queryGPT(`Décris brièvement la civilisation sur la planète P${planetId}`);
-  saveNeuralState(brainState);
-  const newWindow = window.open('', '_blank', 'width=600,height=400');
-  newWindow.document.write(`
-    <html>
-    <head>
-      <title>Civilisation de P${planetId}</title>
-      <style>
-        body {
-          font-family: sans-serif;
-          background: #0a0a0a;
-          color: #00ffe1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-          text-align: center;
-        }
-        h1 { font-size: 2em; }
-        p { font-size: 1em; margin: 1em 0; }
-        button {
-          margin-top: 2em;
-          padding: 0.8em 1.5em;
-          background: transparent;
-          border: 2px solid #00ffe1;
-          color: #00ffe1;
-          border-radius: 10px;
-          font-weight: bold;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-        button:hover {
-          background: #00ffe1;
-          color: #000;
-        }
-      </style>
-    </head>
-    <body>
-      <div>
-        <h1>Bienvenue dans la civilisation de P${planetId}!</h1>
-        <p>${thought}</p>
-        <button onclick="window.close()">⬅️ Retour</button>
-      </div>
-    </body>
-    </html>
-  `);
-  newWindow.document.close();
-}
-async function speakResponse(prompt) {
-  const text = await queryGPT(prompt);
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "fr-FR";
-  speechSynthesis.speak(utterance);
-}
+
+// Ajout de la reconnaissance vocale
+window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = 'fr-FR';
+
+recognition.onresult = (event) => {
+    document.getElementById("userInput").value = event.results[0][0].transcript;
+    askAI();
+};
+
+document.getElementById("voiceButton").addEventListener("click", () => {
+    recognition.start();
+});
