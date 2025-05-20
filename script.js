@@ -1,3 +1,10 @@
+let neuronalMemory = [];
+
+function saveToMemory(data) {
+  const timestamp = new Date().toISOString();
+  neuronalMemory.push({ timestamp, data });
+  console.log("Mémoire neuronale mise à jour :", JSON.stringify(neuronalMemory, null, 2));
+}
 function changeMode() {
     let hours = new Date().getHours();
     if (hours > 18) {
