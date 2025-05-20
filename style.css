@@ -30,3 +30,12 @@ canvas {
   0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
 }
+@keyframes pulseBackground {
+  0% { background: radial-gradient(ellipse at center, #0f0c29, #302b63, #24243e); }
+  50% { background: radial-gradient(ellipse at center, #302b63, #24243e, #0f0c29); }
+  100% { background: radial-gradient(ellipse at center, #0f0c29, #302b63, #24243e); }
+}
+
+body {
+  animation: pulseBackground 10s infinite alternate;
+}
