@@ -1,178 +1,109 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeuraX-Ultime | Cerveau en Opération</title>
-  <style>
-    body {
-      margin: 0;
-      background: #0a0a0a;
-      color: #00ffe1;
-      font-family: 'Orbitron', sans-serif;
-      overflow: hidden;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
-    .dashboard {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 2em;
-      text-align: center;
-    }
-    .start-button {
-      margin-top: 2em;
-      padding: 1em 2em;
-      font-size: 1.2em;
-      background: transparent;
-      border: 2px solid #00ffe1;
-      color: #00ffe1;
-      text-shadow: 0 0 5px #00ffe1;
-      cursor: pointer;
-      border-radius: 12px;
-      animation: fadeIn 3s ease-in-out forwards, pulse 2s infinite;
-      transition: background 0.3s, color 0.3s, transform 0.2s;
-      box-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
-    }
-    .start-button:hover {
-      background: #00ffe1;
-      color: #000;
-      transform: scale(1.05);
-    }
-    .functions {
-      margin-top: 2em;
-      text-align: left;
-      max-width: 400px;
-    }
-    .functions li {
-      margin-bottom: 0.5em;
-      list-style: none;
-    }
-    .functions li::before {
-      content: '🧠';
-      margin-right: 0.5em;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 10px #00ffe1; }
-      50% { box-shadow: 0 0 20px #00ffe1; }
-    }
-  </style>
-</head>
-<body>
-  <canvas id="neuralCanvas"></canvas>
-  <div class="dashboard">
-    <h1>🧠 NeuraX-Ultime</h1>
-    <p>Tableau de bord neuronal en temps réel</p>
-    <button class="start-button" onclick="launchNeuraX()">Activer le cerveau</button>
-    <ul class="functions">
-      <li>Auto-réplication neuronale</li>
-      <li>Sauvegarde JSON automatique</li>
-      <li>Statistiques du cerveau</li>
-      <li>Synthèse vocale intégrée</li>
-      <li>Interconnexion des modules</li>
-    </ul>
-  </div>
-  <script>
-    function launchNeuraX() {
-      const phrase = "Connexion à NeuraX établie. Le système cérébral est opérationnel.";
-      const utterance = new SpeechSynthesisUtterance(phrase);
-      utterance.lang = "fr-FR";
-      speechSynthesis.speak(utterance);
-      alert(phrase);
+// assets/js/brain_3d.js
+
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.min.js';
+
+let scene, camera, renderer, brainMesh, particles;
+
+function initBrain3D() {
+    const canvas = document.getElementById('brainCanvas');
+    if (!canvas) {
+        console.error("Canvas element 'brainCanvas' not found.");
+        return;
     }
 
-    // Animation canvas neurale
-    const canvas = document.getElementById('neuralCanvas');
-    const ctx = canvas.getContext('2d');
-    let w, h;
-    function resize() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
+    // 1. Scène
+    scene = new THREE.Scene();
 
-    const nodes = Array.from({ length: 50 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5
-    }));
+    // 2. Caméra
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
 
-    function draw() {
-      ctx.clearRect(0, 0, w, h);
-      for (let i = 0; i < nodes.length; i++) {
-        const n1 = nodes[i];
-        ctx.beginPath();
-        ctx.arc(n1.x, n1.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#00ffe1';
-        ctx.fill();
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n2 = nodes[j];
-          const dx = n1.x - n2.x;
-          const dy = n1.y - n2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.strokeStyle = 'rgba(0,255,225,0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(n1.x, n1.y);
-            ctx.lineTo(n2.x, n2.y);
-            ctx.stroke();
-          }
-        }
-      }
-      nodes.forEach(n => {
-        n.x += n.vx;
-        n.y += n.vy;
-        if (n.x < 0 || n.x > w) n.vx *= -1;
-        if (n.y < 0 || n.y > h) n.vy *= -1;
-      });
-      requestAnimationFrame(draw);
-    }
-    draw();
-  </script>
-</body>
-</html>
-async function askAI() {
-    let userInput = document.getElementById("userInput").value;
-    let responseText = "Je réfléchis...";
+    // 3. Rendu
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true }); // alpha: true pour la transparence
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
 
-    let response = await fetch("https://api.openai.com/v1/completions", {
-        method: "POST",
-        headers: { "Authorization": "Bearer YOUR_API_KEY", "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "gpt-4", prompt: userInput })
+    // 4. Lumière
+    const ambientLight = new THREE.AmbientLight(0x0a0a0a);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0x00ff00, 1, 100);
+    pointLight.position.set(0, 0, 0);
+    scene.add(pointLight);
+
+    // 5. Création du Cerveau Abstrait (une sphère de base pour commencer)
+    const brainGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+    const brainMaterial = new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        emissive: 0x00ff00,
+        emissiveIntensity: 0.1,
+        metalness: 0.5,
+        roughness: 0.5,
+        transparent: true,
+        opacity: 0.8
+    });
+    brainMesh = new THREE.Mesh(brainGeometry, brainMaterial);
+    scene.add(brainMesh);
+
+    // Effet de pulsation (contrôlé via l'intensité de l'émissivité)
+    gsap.to(brainMaterial, {
+        emissiveIntensity: 0.8,
+        duration: 2,
+        repeat: -1,
+        yoyo: true,
+        ease: "power1.inOut"
     });
 
-    let data = await response.json();
-    responseText = data.choices[0].text;
+    // 6. Effet de Particules (pour les connexions ou flux d'énergie)
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 1000;
+    const positions = new Float32Array(particleCount * 3);
 
-    document.getElementById("response").innerText = responseText;
+    for (let i = 0; i < particleCount * 3; i++) {
+        positions[i] = (Math.random() - 0.5) * 10;
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const particleMaterial = new THREE.PointsMaterial({
+        color: 0x00ff00,
+        size: 0.05,
+        transparent: true,
+        blending: THREE.AdditiveBlending
+    });
+
+    particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    // Animer les particules
+    gsap.to(particles.rotation, {
+        y: Math.PI * 2,
+        duration: 20,
+        repeat: -1,
+        ease: "none"
+    });
+
+    // 7. Fonction d'animation
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotation légère du cerveau
+        brainMesh.rotation.y += 0.001;
+        brainMesh.rotation.x += 0.0005;
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Gestion du redimensionnement de la fenêtre
+    window.addEventListener('resize', onWindowResize, false);
 }
 
-// Ajout de la reconnaissance vocale
-window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.lang = 'fr-FR';
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
-recognition.onresult = (event) => {
-    document.getElementById("userInput").value = event.results[0][0].transcript;
-    askAI();
-};
-
-document.getElementById("voiceButton").addEventListener("click", () => {
-    recognition.start();
-});
+export { initBrain3D };
