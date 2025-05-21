@@ -1,325 +1,22 @@
-
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeuraX-Ultime | Cerveau en Opération</title>
-  <style>
-    body {
-      margin: 0;
-      background: #0a0a0a;
-      color: #00ffe1;
-      font-family: 'Orbitron', sans-serif;
-      overflow: hidden;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
-    .dashboard {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 2em;
-      text-align: center;
-    }
-    .start-button {
-      margin-top: 2em;
-      padding: 1em 2em;
-      font-size: 1.2em;
-      background: transparent;
-      border: 2px solid #00ffe1;
-      color: #00ffe1;
-      text-shadow: 0 0 5px #00ffe1;
-      cursor: pointer;
-      border-radius: 12px;
-      animation: fadeIn 3s ease-in-out forwards, pulse 2s infinite;
-      transition: background 0.3s, color 0.3s, transform 0.2s;
-      box-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
-    }
-    .start-button:hover {
-      background: #00ffe1;
-      color: #000;
-      transform: scale(1.05);
-    }
-    .functions {
-      margin-top: 2em;
-      text-align: left;
-      max-width: 400px;
-    }
-    .functions li {
-      margin-bottom: 0.5em;
-      list-style: none;
-    }
-    .functions li::before {
-      content: '🧠';
-      margin-right: 0.5em;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 10px #00ffe1; }
-      50% { box-shadow: 0 0 20px #00ffe1; }
-    }
-  </style>
-</head>
-<body>
-  <canvas id="neuralCanvas"></canvas>
-  <div class="dashboard">
-    <h1>🧠 NeuraX-Ultime</h1>
-    <p>Tableau de bord neuronal en temps réel</p>
-    <button class="start-button" onclick="launchNeuraX()">Activer le cerveau</button>
-    <ul class="functions">
-      <li>Auto-réplication neuronale</li>
-      <li>Sauvegarde JSON automatique</li>
-      <li>Statistiques du cerveau</li>
-      <li>Synthèse vocale intégrée</li>
-      <li>Interconnexion des modules</li>
-    </ul>
-  </div>
-  <script>
-    function launchNeuraX() {
-      const phrase = "Connexion à NeuraX établie. Le système cérébral est opérationnel.";
-      const utterance = new SpeechSynthesisUtterance(phrase);
-      utterance.lang = "fr-FR";
-      speechSynthesis.speak(utterance);
-      alert(phrase);
-    }
-    // Animation canvas neurale
-    const canvas = document.getElementById('neuralCanvas');
-    const ctx = canvas.getContext('2d');
-    let w, h;
-    function resize() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-    const nodes = Array.from({ length: 50 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5
-    }));
-    function draw() {
-      ctx.clearRect(0, 0, w, h);
-      for (let i = 0; i < nodes.length; i++) {
-        const n1 = nodes[i];
-        ctx.beginPath();
-        ctx.arc(n1.x, n1.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#00ffe1';
-        ctx.fill();
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n2 = nodes[j];
-          const dx = n1.x - n2.x;
-          const dy = n1.y - n2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.strokeStyle = 'rgba(0,255,225,0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(n1.x, n1.y);
-            ctx.lineTo(n2.x, n2.y);
-            ctx.stroke();
-          }
-        }
-      }
-      nodes.forEach(n => {
-        n.x += n.vx;
-        n.y += n.vy;
-        if (n.x < 0 || n.x > w) n.vx *= -1;
-        if (n.y < 0 || n.y > h) n.vy *= -1;
-      });
-      requestAnimationFrame(draw);
-    }
-    draw();
-  </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeuraX-Ultime | Cerveau en Opération</title>
-  <style>
-    body {
-      margin: 0;
-      background: #0a0a0a;
-      color: #00ffe1;
-      font-family: 'Orbitron', sans-serif;
-      overflow: hidden;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
-    .dashboard {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 2em;
-      text-align: center;
-    }
-    .start-button {
-      margin-top: 2em;
-      padding: 1em 2em;
-      font-size: 1.2em;
-      background: transparent;
-      border: 2px solid #00ffe1;
-      color: #00ffe1;
-      text-shadow: 0 0 5px #00ffe1;
-      cursor: pointer;
-      border-radius: 12px;
-      animation: fadeIn 3s ease-in-out forwards, pulse 2s infinite;
-      transition: background 0.3s, color 0.3s, transform 0.2s;
-      box-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
-    }
-    .start-button:hover {
-      background: #00ffe1;
-      color: #000;
-      transform: scale(1.05);
-    }
-    .functions {
-      margin-top: 2em;
-      text-align: left;
-      max-width: 400px;
-    }
-    .functions li {
-      margin-bottom: 0.5em;
-      list-style: none;
-    }
-    .functions li::before {
-      content: '🧠';
-      margin-right: 0.5em;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 10px #00ffe1; }
-      50% { box-shadow: 0 0 20px #00ffe1; }
-    }
-  </style>
-</head>
-<body>
-  <canvas id="neuralCanvas"></canvas>
-  <div class="dashboard">
-    <h1>🧠 NeuraX-Ultime</h1>
-    <p>Tableau de bord neuronal en temps réel</p>
-    <button class="start-button" onclick="launchNeuraX()">Activer le cerveau</button>
-    <ul class="functions">
-      <li>Auto-réplication neuronale</li>
-      <li>Sauvegarde JSON automatique</li>
-      <li>Statistiques du cerveau</li>
-      <li>Synthèse vocale intégrée</li>
-      <li>Interconnexion des modules</li>
-    </ul>
-  </div>
-  <script>
-    function launchNeuraX() {
-      const phrase = "Connexion à NeuraX établie. Le système cérébral est opérationnel.";
-      const utterance = new SpeechSynthesisUtterance(phrase);
-      utterance.lang = "fr-FR";
-      speechSynthesis.speak(utterance);
-      alert(phrase);
-    }
-    // Animation canvas neurale
-    const canvas = document.getElementById('neuralCanvas');
-    const ctx = canvas.getContext('2d');
-    let w, h;
-    function resize() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-    const nodes = Array.from({ length: 50 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5
-    }));
-    function draw() {
-      ctx.clearRect(0, 0, w, h);
-      for (let i = 0; i < nodes.length; i++) {
-        const n1 = nodes[i];
-        ctx.beginPath();
-        ctx.arc(n1.x, n1.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#00ffe1';
-        ctx.fill();
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n2 = nodes[j];
-          const dx = n1.x - n2.x;
-          const dy = n1.y - n2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.strokeStyle = 'rgba(0,255,225,0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(n1.x, n1.y);
-            ctx.lineTo(n2.x, n2.y);
-            ctx.stroke();
-          }
-        }
-      }
-      nodes.forEach(n => {
-        n.x += n.vx;
-        n.y += n.vy;
-        if (n.x < 0 || n.x > w) n.vx *= -1;
-        if (n.y < 0 || n.y > h) n.vy *= -1;
-      });
-      requestAnimationFrame(draw);
-    }
-    draw();
-  </script>
-</body>
-</html><!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NeuraX-Ultime | Cerveau Galactique</title>
   <link rel="icon" href="https://robohash.org/neuraX?size=80x80" type="image/png">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
   <style>
-    /* Variables CSS pour une gestion facile des thèmes */
-    :root {
-      --primary-color: #00ffe1;
-      --background-color: #0a0a0a;
-      --text-color: #00ffe1;
-      --container-background: #111;
-      --gradient-start: #000000cc;
-      --gradient-end: #002020cc;
-    }
-
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
     body {
       margin: 0;
-      background: var(--background-color);
-      color: var(--text-color);
+      background: #0a0a0a;
+      color: #00ffe1;
       font-family: 'Orbitron', sans-serif;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
       touch-action: manipulation;
     }
-
-    canvas#neuralCanvas {
+    canvas {
       position: absolute;
       top: 0;
       left: 0;
@@ -327,35 +24,34 @@
       height: 100vh;
       z-index: 0;
     }
-
     .topbar {
       position: fixed;
       top: 0;
-      left: 0;
       width: 100%;
       height: 60px;
-      background: linear-gradient(to right, var(--gradient-start), var(--gradient-end));
+      background: linear-gradient(to right, #000000cc, #002020cc);
       backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       padding: 0 1.5em;
       z-index: 100;
-      box-shadow: 0 2px 10px var(--primary-color)aa;
+      box-shadow: 0 2px 10px #00ffe1aa;
     }
-
     .topbar img {
       height: 40px;
       margin-right: 1em;
     }
-
     .topbar h1 {
       font-size: 1.4em;
       margin: 0;
-      color: var(--primary-color);
-      text-shadow: 0 0 10px var(--primary-color);
+      color: #00ffe1;
+      text-shadow: 0 0 10px #00ffe1;
       animation: glow 2s ease-in-out infinite alternate;
     }
-
+    @keyframes glow {
+      from { text-shadow: 0 0 5px #00ffe1; }
+      to { text-shadow: 0 0 20px #00ffff, 0 0 30px #00ffe1; }
+    }
     .dashboard {
       position: relative;
       z-index: 1;
@@ -363,398 +59,171 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: calc(100vh - 120px); /* Adjusted for topbar and some padding */
-      padding: 80px 2em 40px; /* top padding for topbar, bottom for counter */
+      height: 100vh;
+      padding-top: 80px;
       text-align: center;
     }
-
-    .dashboard h2 {
-      font-size: 2em;
-      margin-bottom: 0.5em;
-    }
-    
-    .dashboard p {
-      font-size: 1em;
-      max-width: 600px;
-      margin-bottom: 1.5em;
-    }
-
-    .avatar {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: 3px solid var(--primary-color);
-      margin-top: 1em;
-      margin-bottom: 1.5em;
-      animation: pulseAvatar 4s infinite;
-      transition: transform 0.5s ease, box-shadow 0.5s ease;
-    }
-
-    .avatar.awake {
-      transform: scale(1.2) rotate(5deg);
-      box-shadow: 0 0 30px var(--primary-color), 0 0 50px var(--primary-color);
-    }
-
     .start-button {
-      margin-top: 1em;
+      margin-top: 2em;
       padding: 1em 2em;
       font-size: 1.2em;
       background: transparent;
-      border: 2px solid var(--primary-color);
-      color: var(--primary-color);
-      text-shadow: 0 0 5px var(--primary-color);
+      border: 2px solid #00ffe1;
+      color: #00ffe1;
+      text-shadow: 0 0 5px #00ffe1;
       cursor: pointer;
       border-radius: 12px;
-      animation: fadeIn 3s ease-in-out forwards, pulseButton 2s infinite 3s; /* Delay pulse */
+      animation: fadeIn 3s ease-in-out forwards, pulse 2s infinite;
       transition: background 0.3s, color 0.3s, transform 0.2s;
-      box-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color);
+      box-shadow: 0 0 10px #00ffe1, 0 0 20px #00ffe1;
     }
-
-    .start-button:hover, .start-button:focus {
-      background: var(--primary-color);
-      color: var(--background-color);
+    .start-button:hover {
+      background: #00ffe1;
+      color: #000;
       transform: scale(1.05);
-      outline: none;
     }
-
-    .functions-list {
-      margin-top: 2.5em;
-      padding: 0;
+    .functions {
+      margin-top: 2em;
       text-align: left;
-      max-width: 450px;
+      max-width: 400px;
     }
-
-    .functions-list li {
-      margin-bottom: 0.7em;
+    .functions li {
+      margin-bottom: 0.5em;
       list-style: none;
-      opacity: 0;
-      transform: translateX(-20px);
-      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
     }
-    
-    .functions-list li.visible {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .functions-list li::before {
-      content: '✧ '; /* Unicode star for a more sci-fi feel */
-      margin-right: 0.5em;
-      color: var(--primary-color);
-    }
-
-    .chat-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--primary-color);
-      color: var(--background-color);
-      border: none;
-      width: 60px;
-      height: 60px;
-      padding: 1em;
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 0 20px var(--primary-color);
-      z-index: 200;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .chat-btn svg { /* Simple chat icon */
-      width: 24px;
-      height: 24px;
-      fill: var(--background-color);
-    }
-
-    .chat-window {
-      position: fixed;
-      bottom: 90px;
-      right: 20px;
-      width: 320px;
-      height: 450px;
-      background: var(--container-background);
-      border: 2px solid var(--primary-color);
-      border-radius: 10px;
-      display: none; /* Initially hidden */
-      flex-direction: column;
-      z-index: 199;
-      box-shadow: 0 0 30px rgba(0,255,225,0.3);
-    }
-
-    .chat-window-header {
-      padding: 0.8em;
-      background: var(--primary-color);
-      color: var(--background-color);
-      font-weight: bold;
-      border-top-left-radius: 7px;
-      border-top-right-radius: 7px;
-    }
-    
-    .chat-log {
-      flex: 1;
-      background: rgba(0,0,0,0.3);
-      color: var(--text-color);
-      border: none;
-      padding: 1em;
-      resize: none;
-      font-family: monospace;
-      overflow-y: auto;
-      margin: 0.5em;
-      border-radius: 5px;
-    }
-
-    .chat-input-area {
-      display: flex;
-      padding: 0.5em;
-      border-top: 1px solid var(--primary-color)33;
-    }
-
-    .chat-input-area textarea {
-      flex: 1;
-      background: rgba(0,0,0,0.5);
-      color: var(--text-color);
-      border: 1px solid var(--primary-color)77;
-      padding: 0.8em;
-      resize: none;
-      font-family: monospace;
-      border-radius: 5px;
+    .functions li::before {
+      content: '🧠';
       margin-right: 0.5em;
     }
-    
-    .chat-input-area textarea:focus {
-      outline: none;
-      border-color: var(--primary-color);
-    }
-
-    .chat-input-area button {
-      background: var(--primary-color);
-      border: none;
-      color: var(--background-color);
-      padding: 0.8em 1em;
-      cursor: pointer;
-      border-radius: 5px;
-      font-weight: bold;
-    }
-    
-    .chat-input-area button:hover {
-      filter: brightness(1.2);
-    }
-    
-    .neural-counter {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      color: var(--primary-color);
-      font-size: 1em;
-      background: rgba(0, 255, 225, 0.1);
-      padding: 0.5em 1em;
-      border-radius: 12px;
-      box-shadow: 0 0 10px var(--primary-color);
-      z-index: 2;
-    }
-
-    /* Animations */
-    @keyframes glow {
-      from { text-shadow: 0 0 5px var(--primary-color); }
-      to { text-shadow: 0 0 20px var(--primary-color), 0 0 30px var(--primary-color); }
-    }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
-    @keyframes pulseButton {
-      0%, 100% { box-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color); }
-      50% { box-shadow: 0 0 20px var(--primary-color), 0 0 30px var(--primary-color); transform: scale(1.02); }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 10px #00ffe1; }
+      50% { box-shadow: 0 0 20px #00ffe1; }
     }
-    
-    @keyframes pulseAvatar {
-      0%, 100% { border-color: var(--primary-color); }
-      50% { border-color: #fff; }
-    }
-
-    /* Reduced motion accessibility */
     @media (prefers-reduced-motion: reduce) {
       * {
         animation: none !important;
         transition: none !important;
       }
     }
+    .avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #00ffe1;
+      margin-top: 1em;
+      animation: pulse 4s infinite;
+      transition: transform 0.5s ease;
+    }
+    .avatar.awake {
+      transform: scale(1.2) rotate(5deg);
+      box-shadow: 0 0 40px #00ffe1, 0 0 60px #00ffff;
+    }
+    .chat-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #00ffe1;
+      color: #000;
+      border: none;
+      padding: 1em;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 20px #00ffe1;
+      z-index: 200;
+    }
+    .chat-window {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 300px;
+      height: 400px;
+      background: #111;
+      border: 2px solid #00ffe1;
+      border-radius: 10px;
+      display: none;
+      flex-direction: column;
+      z-index: 199;
+    }
+    .chat-window textarea {
+      flex: 1;
+      background: #000;
+      color: #00ffe1;
+      border: none;
+      padding: 1em;
+      resize: none;
+      font-family: monospace;
+    }
+    .chat-window button {
+      background: #00ffe1;
+      border: none;
+      color: #000;
+      padding: 0.5em;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <canvas id="neuralCanvas"></canvas>
-
   <div class="topbar">
-    <img src="https://robohash.org/neuraX-logo?set=set4&size=80x80" alt="Logo NeuraX"> <h1>NeuraX-Ultime – Cerveau Galactique</h1>
+    <img src="https://robohash.org/neuraX?size=80x80" alt="Logo NeuraX">
+    <h1>NeuraX-ultime – Cerveau Galactique</h1>
   </div>
-
   <div class="dashboard">
-    <h2>Galaxie NeuraX-Ultime</h2>
-    <p>Exploration des confins de l'intelligence artificielle. Préparez-vous à l'éveil neuronal.</p>
-    <img class="avatar" id="avatarIA" src="https://robohash.org/NeuraX-Ultime-Avatar?set=set2&size=200x200" alt="Avatar IA">
-    <button class="start-button" id="startButton" onclick="launchNeuraX()">Déclencher l’Éveil Neuronal</button>
-    <ul class="functions-list" id="functionList">
-      <li>Création dynamique de modèles IA</li>
-      <li>Réseaux neuronaux avancés synchronisés</li>
-      <li>Analyse contextuelle et adaptative</li>
-      <li>Apprentissage auto-évolutif</li>
-      <li>Interface de dialogue intuitive</li>
-      <li>Simulation de personnalité IA</li>
+    <h2>🪐 Galaxie NeuraX</h2>
+    <p>Cosmos de Titans interconnectés – Intelligence en expansion</p>
+    <img class="avatar" id="avatarIA" src="https://robohash.org/neuraX" alt="Avatar IA">
+    <button class="start-button" onclick="launchNeuraX()">Déclencher l’explosion neuronale</button>
+    <ul class="functions">
+      <li>Création dynamique de galaxies</li>
+      <li>12 planètes par système solaire</li>
+      <li>Chaque planète abrite une civilisation de titans</li>
+      <li>Titans = Chatbots interconnectés = Neurones</li>
+      <li>Réseaux neuronaux galactiques synchronisés</li>
+      <li>Auto-réplication et expansion autonome</li>
     </ul>
   </div>
-
-  <button class="chat-btn" id="chatBtn" onclick="toggleChat()" aria-label="Ouvrir le chat">
-    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
-  </button>
-
+  <button class="chat-btn" onclick="toggleChat()">💬</button>
   <div class="chat-window" id="chatWindow">
-    <div class="chat-window-header">Chat avec NeuraX</div>
-    <textarea class="chat-log" id="chatLog" readonly></textarea>
-    <div class="chat-input-area">
-      <textarea id="userInput" placeholder="Votre message..." rows="2" aria-label="Votre message"></textarea>
-      <button onclick="sendMessage()">Envoyer</button>
-    </div>
+    <textarea id="chatLog" readonly></textarea>
+    <textarea id="userInput" placeholder="Écris-moi..." rows="2"></textarea>
+    <button onclick="sendMessage()">Envoyer</button>
   </div>
-  
-  <div class="neural-counter" id="neuralCounter">Activité Neurone: 0.00 Hz</div>
-
+  <script src="neural-map.js"></script>
+  <script src="chat-core.js"></script>
   <script>
     const synth = window.speechSynthesis;
-    const avatar = document.getElementById('avatarIA');
-    const startButton = document.getElementById('startButton');
-    const functionListItems = document.getElementById('functionList').children;
-    const chatWindow = document.getElementById('chatWindow');
-    const chatLog = document.getElementById('chatLog');
-    const userInput = document.getElementById('userInput');
-    const neuralCounter = document.getElementById('neuralCounter');
-
-    const launchPhrases = [
-      "Initialisation du noyau NeuraX-Ultime...",
-      "Activation des protocoles de conscience...",
-      "Synchronisation des matrices cognitives...",
-      "Chargement des algorithmes d'apprentissage évolutif...",
-      "Calibration de l'interface de dialogue...",
-      "Simulation de personnalité en cours d'ajustement...",
-      "NeuraX-Ultime est maintenant opérationnel. Bienvenue."
-    ];
-
-    function speak(text, onEndCallback) {
-      if (!synth) {
-        console.warn("SpeechSynthesis non supporté.");
-        if(onEndCallback) setTimeout(onEndCallback, 500); // Simuler la durée de la parole
-        return;
-      }
+    function speak(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'fr-FR';
-      utterance.pitch = 1.0; // Ajusté pour une voix plus neutre/IA
-      utterance.rate = 1.1;  // Un peu plus rapide
-      utterance.volume = 0.9;
-      if (onEndCallback) {
-        utterance.onend = onEndCallback;
-      }
-      // Annuler les paroles précédentes pour éviter la superposition si on clique à nouveau
-      synth.cancel(); 
+      utterance.pitch = 1.1;
+      utterance.rate = 1;
+      utterance.volume = 1;
       synth.speak(utterance);
     }
-
     function launchNeuraX() {
-      startButton.disabled = true;
-      startButton.textContent = "Initialisation...";
-      avatar.classList.add('awake');
-      
-      let phraseIndex = 0;
-      let functionItemIndex = 0;
-
-      function speakNextPhrase() {
-        if (phraseIndex < launchPhrases.length) {
-          speak(launchPhrases[phraseIndex], () => {
-            if (functionItemIndex < functionListItems.length && phraseIndex > 0) { // Commencer à afficher les items après la 1ere phrase
-                functionListItems[functionItemIndex].classList.add('visible');
-                functionItemIndex++;
-            }
-            phraseIndex++;
-            setTimeout(speakNextPhrase, 500); // Pause entre les phrases
-          });
-        } else {
-          // S'assurer que tous les items sont visibles
-          for(let i = functionItemIndex; i < functionListItems.length; i++) {
-            functionListItems[i].classList.add('visible');
-          }
-          avatar.classList.remove('awake'); // Optionnel: ou autre état
-          startButton.disabled = false;
-          startButton.textContent = "Réinitialiser l'Éveil";
-          console.log("Séquence d'éveil NeuraX-Ultime terminée.");
-        }
-      }
-      speakNextPhrase();
-      // Simuler un chargement de logs ou autre
-      fetch('logs_neuronaux.json') // Fichier fictif
-        .then(response => response.ok ? response.json() : Promise.reject('Fichier non trouvé'))
-        .then(data => console.log("Logs neuronaux (simulés) chargés:", data))
-        .catch(error => console.warn("Chargement simulé des logs neuronaux:", error));
+      const avatar = document.getElementById('avatarIA');
+      avatar.classList.toggle('awake');
     }
-
     function toggleChat() {
+      const chatWindow = document.getElementById('chatWindow');
       chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
-      if (chatWindow.style.display === 'flex') {
-        userInput.focus();
-      }
     }
-
     function sendMessage() {
+      const chatLog = document.getElementById('chatLog');
+      const userInput = document.getElementById('userInput');
       const message = userInput.value.trim();
       if (message) {
-        appendMessageToLog(`Vous: ${message}`, 'user');
+        const reply = `🤖 NeuraX: Tu m'as dit "${message}". Voici ma réponse galactique !`;
+        chatLog.value += `\n👤 Toi: ${message}`;
+        chatLog.value += `\n${reply}`;
+        speak(reply);
         userInput.value = '';
-        
-        // Placeholder pour la réponse de l'IA
-        // Dans une vraie application, ici on appellerait le backend NeuraX
-        setTimeout(() => {
-          const aiReply = `NeuraX: J'ai bien reçu "${message}". Je traite votre requête galactique.`;
-          appendMessageToLog(aiReply, 'ai');
-          speak(aiReply);
-        }, 1000);
       }
     }
-    
-    userInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); // Empêche le saut de ligne dans le textarea
-            sendMessage();
-        }
-    });
-
-    function appendMessageToLog(message, sender) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('chat-message', sender); // Pour styler différemment les messages user/ai
-        messageElement.textContent = message;
-        chatLog.appendChild(messageElement);
-        chatLog.scrollTop = chatLog.scrollHeight; // Auto-scroll
-    }
-
-    // Animation canvas neurale (simplifiée et intégrée)
-    const canvas = document.getElementById('neuralCanvas');
-    const ctx = canvas.getContext('2d');
-    let w, h;
-    let nodes = [];
-
-    function resizeCanvas() {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-      nodes = Array.from({ length: Math.min(80, Math.floor(w * h / 20000)) }, () => ({ // Densité adaptative
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        size: Math.random() * 1.5 + 1 // Taille variable
-      }));
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    function drawNeuralAnimation() {
-      ctx.clearRect(0, 0, w, h);
-      let
+  </script>
+</body>
+</html>
