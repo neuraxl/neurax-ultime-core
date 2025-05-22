@@ -1137,7 +1137,13 @@
         let connectionsRef;
 
         // --- Variables Three.js ---
-        let scene, camera, renderer, virtualBrain; // Renommé 'galaxy' en 'virtualBrain'
+        let scene, camera, renderer, virtualBrain;
+        let isMouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+        const rotationSpeed = 0.002;
 
         // --- Initialisation Firebase et Authentification ---
         const initializeFirebase = async () => {
@@ -1232,9 +1238,9 @@
             // Scène
             scene = new THREE.Scene();
 
-            // Caméra
+            // Caméra : Positionnée au centre, regardant vers l'extérieur
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 100; // Positionner la caméra pour voir le cerveau
+            camera.position.set(0, 0, 0.1); // Légèrement décalé pour éviter le clipping exact au centre
 
             // Rendu
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // alpha: true pour un fond transparent
@@ -1258,14 +1264,11 @@
             const neuronPositions = new Float32Array(numNeurons * 3);
             const neuronColors = new Float32Array(numNeurons * 3);
             const neuronSize = 0.8;
-            const brainRadius = 60; // Taille générale du cerveau
+            const brainRadius = 100; // Taille générale du cerveau, assez grande pour entourer la caméra
 
             const tempColor1 = new THREE.Color(0x00d2ff); // Couleur de surbrillance
             const tempColor2 = new THREE.Color(0xff416c); // Couleur d'avertissement
             const tempColor3 = new THREE.Color(0xe6f7ff); // Couleur claire
-
-            const neuronGeometries = [];
-            const neuronMaterials = [];
 
             // Créer les neurones (points)
             for (let i = 0; i < numNeurons; i++) {
@@ -1373,17 +1376,55 @@
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
             directionalLight.position.set(0, 0, 1).normalize();
             scene.add(directionalLight);
+
+            // Gestion des événements de la souris pour la rotation de la caméra
+            renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+            renderer.domElement.addEventListener('mouseup', onMouseUp, false);
+            renderer.domElement.addEventListener('mouseleave', onMouseUp, false); // Gérer le cas où la souris sort de la fenêtre
         };
+
+        // Three.js : Fonctions de gestion de la souris
+        function onMouseDown(event) {
+            isMouseDown = true;
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+
+        function onMouseMove(event) {
+            if (!isMouseDown) return;
+
+            const deltaX = event.clientX - mouseX;
+            const deltaY = event.clientY - mouseY;
+
+            targetRotationY += deltaX * rotationSpeed;
+            targetRotationX += deltaY * rotationSpeed;
+
+            // Limiter la rotation verticale pour éviter le "flip"
+            targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
+
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+
+        function onMouseUp(event) {
+            isMouseDown = false;
+        }
+
 
         // Three.js : Boucle d'animation pour le Cerveau Virtuel
         const animateVirtualBrain3D = () => {
             requestAnimationFrame(animateVirtualBrain3D);
 
+            // Rotation douce du cerveau virtuel lui-même (pour un mouvement de fond continu)
             if (virtualBrain) {
-                virtualBrain.rotation.y += 0.0008; // Rotation lente
-                virtualBrain.rotation.x += 0.0002; // Légère inclinaison
-                // Vous pouvez ajouter d'autres animations ici, comme un léger "pulsing"
+                virtualBrain.rotation.y += 0.0001; // Rotation très lente
+                virtualBrain.rotation.x += 0.00005; // Très légère inclinaison
             }
+
+            // Appliquer la rotation de la caméra avec un lissage
+            camera.rotation.y += (targetRotationY - camera.rotation.y) * 0.1;
+            camera.rotation.x += (targetRotationX - camera.rotation.x) * 0.1;
 
             renderer.render(scene, camera);
         };
