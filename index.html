@@ -104,6 +104,14 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.1); }
         }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: rgba(230, 247, 255, 0.7);
+        }
         
         .user-panel {
             display: flex;
@@ -385,8 +393,16 @@
             font-weight: bold;
             font-size: 0.8rem;
             text-shadow: 0 0 5px black;
+            transform: scale(0); /* Commence caché */
+            animation: planetAppear 0.5s forwards ease-out; /* Animation d'apparition */
         }
         
+        @keyframes planetAppear {
+            to {
+                transform: scale(1);
+            }
+        }
+
         .planet:hover {
             transform: scale(1.1);
             box-shadow: 0 0 30px var(--highlight);
@@ -415,7 +431,7 @@
         .connection.active {
             opacity: 0.7;
             background: linear-gradient(90deg, var(--highlight), #ff416c);
-            animation: pulseConnection 2s infinite;
+            animation: pulseConnection 1s infinite alternate; /* Rendre l'animation de pulsation plus visible */
         }
         
         @keyframes pulseConnection {
@@ -780,6 +796,12 @@
             font-size: 1.1rem;
         }
         
+        .planet-desc {
+            font-size: 0.9rem;
+            color: rgba(230, 247, 255, 0.8);
+            margin-bottom: 1rem;
+        }
+        
         .planet-stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -799,6 +821,67 @@
             color: white;
             font-weight: 500;
         }
+
+        /* Styles pour le nouveau modal de détails de planète */
+        .planet-details-modal-content {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+            border: 1px solid var(--highlight);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.5);
+            animation: modalAppear 0.5s;
+        }
+
+        .planet-details-modal-content .modal-title {
+            margin-bottom: 1rem;
+        }
+
+        .planet-details-info {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .planet-details-info-item {
+            background: rgba(0, 210, 255, 0.05);
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 210, 255, 0.1);
+        }
+
+        .planet-details-info-item .label {
+            font-size: 0.85rem;
+            color: var(--highlight);
+            margin-bottom: 0.2rem;
+            display: block;
+        }
+
+        .planet-details-info-item .value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--light);
+        }
+
+        .planet-details-description {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: rgba(230, 247, 255, 0.8);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.1);
+        }
+
+        .planet-details-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -809,6 +892,9 @@
             <div class="logo">
                 <i class="fas fa-atom logo-icon"></i>
                 <h1>NeuraX-Ultime 2.0</h1>
+            </div>
+            <div class="user-info">
+                <span id="userIdDisplay">Chargement ID...</span>
             </div>
             <div class="user-panel">
                 <div class="avatar">
@@ -956,8 +1042,7 @@
                     </div>
                 </div>
                 <div class="galaxy-container" id="galaxyContainer">
-                    <!-- Planets and connections will be added here by JavaScript -->
-                </div>
+                    </div>
             </div>
             
             <div class="planet-tooltip" id="planetTooltip">
@@ -999,54 +1084,737 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Identifiant Administrateur</label>
-                    <input type="text" class="form-input" placeholder="Entrez votre ID Administrateur">
+                    <input type="text" class="form-input" placeholder="Entrez votre identifiant">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Sélection des Mondes Initiaux</label>
-                    <select class="form-input">
-                        <option>Tous les mondes disponibles</option>
-                        <option>Civilisations Alpha uniquement</option>
-                        <option>Noyau Central et satellites</option>
-                        <option>Sélection personnalisée...</option>
-                    </select>
+                    <label class="form-label">Code d'autorisation</label>
+                    <input type="password" class="form-input" placeholder="Entrez le code d'autorisation">
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" id="cancelActivation">Annuler</button>
-                <button class="btn btn-primary" id="confirmActivation">Activer la Matrice</button>
+                <button class="btn btn-primary" id="confirmActivation">Activer Maintenant</button>
             </div>
         </div>
     </div>
-    
-    <script>
-        // DOM Elements
+
+    <div class="modal" id="planetDetailsModal">
+        <div class="planet-details-modal-content">
+            <button class="close-modal" id="closePlanetDetailsModal">&times;</button>
+            <div class="modal-header">
+                <h2 class="modal-title" id="detailPlanetName">Détails de la Planète</h2>
+            </div>
+            <div class="modal-body">
+                <p class="planet-details-description" id="detailPlanetDescription">Description de la planète.</p>
+                <div class="planet-details-info">
+                    <div class="planet-details-info-item">
+                        <span class="label">Type de Planète:</span>
+                        <span class="value" id="detailPlanetType"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Taille:</span>
+                        <span class="value" id="detailPlanetSize"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Population:</span>
+                        <span class="value" id="detailPlanetPopulation"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Technologie:</span>
+                        <span class="value" id="detailPlanetTech"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Connexions:</span>
+                        <span class="value" id="detailPlanetConnections"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Stabilité:</span>
+                        <span class="value" id="detailPlanetStability"></span>
+                    </div>
+                </div>
+                <div class="planet-details-actions">
+                    <button class="btn btn-primary" id="interactWithPlanetBtn">Interagir</button>
+                    <button class="btn btn-cancel" id="deletePlanetBtn">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variables globales fournies par l'environnement Canvas (NE PAS MODIFIER CES LIGNES)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let db;
+        let auth;
+        let userId;
+        let isAuthReady = false; // Drapeau pour s'assurer que les opérations Firestore ne se produisent qu'après l'authentification
+
+        // Références aux collections Firestore
+        let planetsRef;
+        let connectionsRef;
+
+        // --- Initialisation Firebase et Authentification ---
+        const initializeFirebase = async () => {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("ID utilisateur Firebase :", userId);
+                        document.getElementById('userIdDisplay').textContent = `ID Utilisateur: ${userId}`;
+                        planetsRef = collection(db, `artifacts/${appId}/users/${userId}/planets`);
+                        connectionsRef = collection(db, `artifacts/${appId}/users/${userId}/connections`);
+                        isAuthReady = true;
+                        loadGalaxyFromFirestore(); // Charger les données une fois authentifié
+                    } else {
+                        // Se connecter anonymement si aucun utilisateur ou jeton
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation de Firebase ou de l'authentification :", error);
+                showToast("Erreur d'initialisation Firebase. Veuillez réessayer.", "error");
+            }
+        };
+
+        // --- Éléments du DOM ---
+        const starsContainer = document.getElementById('stars');
+        const universeCanvas = document.getElementById('universe-canvas');
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
+        const navItems = document.querySelectorAll('.nav-item');
+        const activationModal = document.getElementById('activationModal');
         const startBtn = document.getElementById('startBtn');
         const exploreBtn = document.getElementById('exploreBtn');
         const connectBtn = document.getElementById('connectBtn');
+        const commBtn = document.getElementById('commBtn');
         const resetBtn = document.getElementById('resetBtn');
-        const activationModal = document.getElementById('activationModal');
         const closeActivationModal = document.getElementById('closeActivationModal');
         const cancelActivation = document.getElementById('cancelActivation');
         const confirmActivation = document.getElementById('confirmActivation');
-        const planetCountEl = document.getElementById('planetCount');
-        const connectionCountEl = document.getElementById('connectionCount');
-        const expansionProgressEl = document.getElementById('expansionProgress');
         const galaxyContainer = document.getElementById('galaxyContainer');
         const planetTooltip = document.getElementById('planetTooltip');
-        const planetNameEl = document.getElementById('planetName');
-        const planetDescEl = document.getElementById('planetDesc');
-        const planetPopulationEl = document.getElementById('planetPopulation');
-        const planetTechEl = document.getElementById('planetTech');
-        const planetConnectionsEl = document.getElementById('planetConnections');
-        const planetStabilityEl = document.getElementById('planetStability');
-        
-        // Universe Configuration
-        const universeConfig = {
-            planets: [],
-            connections: [],
-            maxPlanets: 20,
-            baseSize: 30,
-            activeSize: 40,
-            colors: ['#00d2
+        const planetCountElement = document.getElementById('planetCount');
+        const connectionCountElement = document.getElementById('connectionCount');
+
+        // Nouveaux éléments pour le modal de détails de planète
+        const planetDetailsModal = document.getElementById('planetDetailsModal');
+        const closePlanetDetailsModal = document.getElementById('closePlanetDetailsModal');
+        const detailPlanetName = document.getElementById('detailPlanetName');
+        const detailPlanetDescription = document.getElementById('detailPlanetDescription');
+        const detailPlanetType = document.getElementById('detailPlanetType');
+        const detailPlanetSize = document.getElementById('detailPlanetSize');
+        const detailPlanetPopulation = document.getElementById('detailPlanetPopulation');
+        const detailPlanetTech = document.getElementById('detailPlanetTech');
+        const detailPlanetConnections = document.getElementById('detailPlanetConnections');
+        const detailPlanetStability = document.getElementById('detailPlanetStability');
+        const interactWithPlanetBtn = document.getElementById('interactWithPlanetBtn');
+        const deletePlanetBtn = document.getElementById('deletePlanetBtn');
+
+        // --- Variables Globales pour les Données de la Galaxie ---
+        let planetsData = [];
+        let connectionsData = [];
+        let nextPlanetId = 1; // Pour générer des IDs uniques pour les nouvelles planètes
+
+        // --- Fonctions Utilitaires ---
+
+        // Génération du champ d'étoiles
+        const generateStars = () => {
+            starsContainer.innerHTML = ''; // Nettoyer les étoiles existantes
+            const numStars = 100;
+            for (let i = 0; i < numStars; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = `${Math.random() * 3 + 1}px`;
+                star.style.height = star.style.width;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.animationDelay = `${Math.random() * 2}s`;
+                star.style.setProperty('--duration', `${Math.random() * 5 + 3}s`);
+                starsContainer.appendChild(star);
+            }
+        };
+
+        // Redimensionnement du Canvas de l'univers (si utilisé pour des effets visuels)
+        const resizeUniverseCanvas = () => {
+            if (universeCanvas) {
+                universeCanvas.width = window.innerWidth;
+                universeCanvas.height = window.innerHeight;
+                // Ici, vous pourriez redessiner des nébuleuses si votre effet les utilise
+            }
+        };
+
+        // Bascule de la barre latérale pour mobile
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+        }
+
+        // État actif de l'élément de navigation
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                if (sidebar.classList.contains('open') && window.innerWidth <= 1024) {
+                    sidebar.classList.remove('open'); // Ferme la barre latérale sur un clic sur un élément de navigation sur mobile
+                }
+            });
+        });
+
+        // --- Fonctions des Modals et Toasts ---
+        const showModal = (modalElement) => {
+            modalElement.style.display = 'flex';
+        };
+
+        const hideModal = (modalElement) => {
+            modalElement.style.display = 'none';
+        };
+
+        const showToast = (message, type = 'success') => {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3500); // Supprimer après 3.5 secondes (incluant l'animation fadeOut)
+        };
+
+        // --- Logique de la Galaxie (Firestore-aware) ---
+
+        // Charger les données de la galaxie depuis Firestore
+        const loadGalaxyFromFirestore = () => {
+            if (!isAuthReady) return; // S'assurer que Firebase est initialisé et l'utilisateur authentifié
+
+            // Écouter les changements des planètes en temps réel
+            onSnapshot(planetsRef, (snapshot) => {
+                planetsData = [];
+                snapshot.forEach(doc => {
+                    planetsData.push(doc.data());
+                });
+                // Trouver le plus grand ID pour éviter les doublons lors de l'ajout de nouvelles planètes
+                const maxId = planetsData.reduce((max, p) => {
+                    if (p.id.startsWith('chatbot-')) {
+                        const num = parseInt(p.id.split('-')[1]);
+                        return Math.max(max, num);
+                    }
+                    return max;
+                }, 0);
+                nextPlanetId = maxId + 1;
+
+                positionPlanets();
+                renderGalaxy();
+                updateStats();
+            }, (error) => {
+                console.error("Erreur lors du chargement des planètes :", error);
+                showToast("Erreur de chargement des mondes.", "error");
+            });
+
+            // Écouter les changements des connexions en temps réel
+            onSnapshot(connectionsRef, (snapshot) => {
+                connectionsData = [];
+                snapshot.forEach(doc => {
+                    const conn = doc.data();
+                    // Récupérer les objets planète réels à partir de leurs IDs
+                    const fromPlanet = planetsData.find(p => p.id === conn.fromPlanetId);
+                    const toPlanet = planetsData.find(p => p.id === conn.toPlanetId);
+                    if (fromPlanet && toPlanet) {
+                        connectionsData.push({ from: fromPlanet, to: toPlanet, docId: doc.id }); // Stocker l'ID du document pour la suppression
+                    }
+                });
+                renderGalaxy();
+                updateStats();
+            }, (error) => {
+                console.error("Erreur lors du chargement des connexions :", error);
+                showToast("Erreur de chargement des routes spatiales.", "error");
+            });
+        };
+
+        // Sauvegarder les données de la galaxie dans Firestore
+        const savePlanetToFirestore = async (planet) => {
+            if (!isAuthReady) return;
+            try {
+                await setDoc(doc(planetsRef, planet.id), planet);
+                console.log(`Planète ${planet.id} sauvegardée.`);
+            } catch (e) {
+                console.error("Erreur lors de la sauvegarde de la planète : ", e);
+                showToast("Erreur de sauvegarde de planète.", "error");
+            }
+        };
+
+        const saveConnectionToFirestore = async (connection) => {
+            if (!isAuthReady) return;
+            try {
+                // Firestore ne peut pas stocker directement des références circulaires ou des objets complexes
+                // Nous stockons simplement les IDs des planètes connectées
+                const connectionDoc = {
+                    fromPlanetId: connection.from.id,
+                    toPlanetId: connection.to.id
+                };
+                const docRef = await addDoc(connectionsRef, connectionDoc);
+                console.log(`Connexion ajoutée avec l'ID: ${docRef.id}`);
+                return docRef.id; // Retourne l'ID du document Firestore
+            } catch (e) {
+                console.error("Erreur lors de la sauvegarde de la connexion : ", e);
+                showToast("Erreur de sauvegarde de connexion.", "error");
+            }
+        };
+
+        const deletePlanetFromFirestore = async (planetId) => {
+            if (!isAuthReady) return;
+            try {
+                await deleteDoc(doc(planetsRef, planetId));
+                // Supprimer aussi les connexions liées à cette planète
+                const connectionsToDelete = connectionsData.filter(c => c.from.id === planetId || c.to.id === planetId);
+                for (const conn of connectionsToDelete) {
+                    if (conn.docId) { // S'assurer que l'ID du document Firestore est stocké
+                        await deleteDoc(doc(connectionsRef, conn.docId));
+                    }
+                }
+                showToast(`Monde ${planetId} supprimé.`, 'success');
+            } catch (e) {
+                console.error("Erreur lors de la suppression de la planète : ", e);
+                showToast("Erreur de suppression de monde.", "error");
+            }
+        };
+
+        const deleteAllDataInFirestore = async () => {
+            if (!isAuthReady) return;
+            try {
+                // Supprimer toutes les planètes
+                const planetDocs = await getDocs(planetsRef);
+                for (const d of planetDocs.docs) {
+                    await deleteDoc(d.ref);
+                }
+                // Supprimer toutes les connexions
+                const connectionDocs = await getDocs(connectionsRef);
+                for (const d of connectionDocs.docs) {
+                    await deleteDoc(d.ref);
+                }
+                showToast("Toutes les données de la galaxie ont été effacées de Firestore.", "success");
+            } catch (e) {
+                console.error("Erreur lors de la suppression de toutes les données : ", e);
+                showToast("Erreur lors de la réinitialisation complète.", "error");
+            }
+        };
+
+
+        // Initialiser la galaxie avec un noyau (si vide)
+        const initializeGalaxy = async () => {
+            if (!isAuthReady) {
+                console.warn("Firebase non prêt pour l'initialisation de la galaxie.");
+                return;
+            }
+            const coreExists = planetsData.some(p => p.id === 'core');
+            if (!coreExists) {
+                const corePlanet = {
+                    id: 'core',
+                    name: 'Noyau NeuraX',
+                    type: 'core',
+                    size: 80,
+                    population: '∞',
+                    tech: '100%',
+                    connections: 0,
+                    stability: '99%',
+                    description: "Le cœur du réseau NeuraX, centre de toutes les opérations."
+                };
+                await savePlanetToFirestore(corePlanet); // Sauvegarder le noyau dans Firestore
+                // planetsData sera mis à jour via onSnapshot
+            }
+        };
+
+        // Positionner les planètes de manière réactive
+        const positionPlanets = () => {
+            const containerRect = galaxyContainer.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+
+            const core = planetsData.find(p => p.id === 'core');
+            if (core) {
+                core.x = containerWidth / 2 - core.size / 2;
+                core.y = containerHeight / 2 - core.size / 2;
+            }
+
+            planetsData.forEach(planet => {
+                if (planet.id !== 'core') {
+                    if (!planet.originalAngle || !planet.originalDistance) {
+                        planet.originalAngle = Math.random() * Math.PI * 2;
+                        planet.originalDistance = Math.random() * (Math.min(containerWidth, containerHeight) / 3 - 50) + 50;
+                    }
+                    const size = planet.size || 25;
+                    planet.x = core.x + planet.originalDistance * Math.cos(planet.originalAngle) - size / 2;
+                    planet.y = core.y + planet.originalDistance * Math.sin(planet.originalAngle) - size / 2;
+
+                    planet.x = Math.max(0, Math.min(planet.x, containerWidth - size));
+                    planet.y = Math.max(0, Math.min(planet.y, containerHeight - size));
+                }
+            });
+        };
+
+        const renderGalaxy = () => {
+            galaxyContainer.innerHTML = '';
+
+            // Rendre les connexions
+            connectionsData.forEach(conn => {
+                const line = document.createElement('div');
+                line.className = 'connection';
+                const x1 = conn.from.x + conn.from.size / 2;
+                const y1 = conn.from.y + conn.from.size / 2;
+                const x2 = conn.to.x + conn.to.size / 2;
+                const y2 = conn.to.y + conn.to.size / 2;
+
+                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+                line.style.width = `${length}px`;
+                line.style.transform = `rotate(${angle}deg)`;
+                line.style.left = `${x1}px`;
+                line.style.top = `${y1}px`;
+                galaxyContainer.appendChild(line);
+            });
+
+            // Rendre les planètes
+            planetsData.forEach(planetData => {
+                const planet = document.createElement('div');
+                planet.className = `planet ${planetData.type}`;
+                planet.style.width = `${planetData.size}px`;
+                planet.style.height = `${planetData.size}px`;
+                planet.style.left = `${planetData.x}px`;
+                planet.style.top = `${planetData.y}px`;
+                if (planetData.id !== 'core') {
+                    planet.textContent = planetData.name.replace('Civi-IA-', 'IA');
+                }
+                
+                // Événements pour le tooltip (hover)
+                planet.addEventListener('mouseenter', (e) => {
+                    showPlanetTooltip(planetData, e.clientX, e.clientY);
+                    highlightConnections(planetData);
+                });
+                planet.addEventListener('mouseleave', () => {
+                    hidePlanetTooltip();
+                    clearHighlights();
+                });
+
+                // Événement pour le modal de détails (click)
+                planet.addEventListener('click', () => {
+                    showPlanetDetailsModal(planetData);
+                });
+
+                galaxyContainer.appendChild(planet);
+            });
+        };
+
+        const showPlanetTooltip = (data, mouseX, mouseY) => {
+            const tooltip = document.getElementById('planetTooltip');
+            document.getElementById('planetName').textContent = data.name;
+            document.getElementById('planetDesc').textContent = data.description || 'Information non disponible.';
+            document.getElementById('planetPopulation').textContent = data.population;
+            document.getElementById('planetTech').textContent = data.tech;
+            document.getElementById('planetConnections').textContent = data.connections;
+            document.getElementById('planetStability').textContent = data.stability;
+
+            let top = mouseY + 15;
+            let left = mouseX + 15;
+
+            const bodyRect = document.body.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+
+            if (left + tooltipRect.width > bodyRect.right - 20) {
+                left = mouseX - tooltipRect.width - 15;
+            }
+            if (top + tooltipRect.height > bodyRect.bottom - 20) {
+                top = bodyRect.bottom - tooltipRect.height - 20;
+            }
+            left = Math.max(20, left);
+            top = Math.max(20, top);
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+            tooltip.classList.add('show');
+        };
+
+        const hidePlanetTooltip = () => {
+            document.getElementById('planetTooltip').classList.remove('show');
+        };
+
+        const highlightConnections = (selectedPlanet) => {
+            const lines = galaxyContainer.querySelectorAll('.connection');
+            lines.forEach(line => line.classList.remove('active'));
+
+            connectionsData.forEach((conn, index) => {
+                if (conn.from.id === selectedPlanet.id || conn.to.id === selectedPlanet.id) {
+                    const connectionElement = galaxyContainer.children[index];
+                    if(connectionElement) connectionElement.classList.add('active');
+                }
+            });
+        };
+
+        const clearHighlights = () => {
+            const lines = galaxyContainer.querySelectorAll('.connection');
+            lines.forEach(line => line.classList.remove('active'));
+        };
+
+        const updateStats = () => {
+            planetCountElement.textContent = planetsData.length;
+            connectionCountElement.textContent = connectionsData.length;
+        };
+
+        // --- Logique des Boutons de Contrôle ---
+
+        // Activation de la Matrice Stellaire
+        if (startBtn) {
+            startBtn.addEventListener('click', () => showModal(activationModal));
+        }
+        if (closeActivationModal) {
+            closeActivationModal.addEventListener('click', () => hideModal(activationModal));
+        }
+        if (cancelActivation) {
+            cancelActivation.addEventListener('click', () => hideModal(activationModal));
+        }
+        if (confirmActivation) {
+            confirmActivation.addEventListener('click', async () => {
+                const activationLevel = document.getElementById('activationLevel').value;
+                console.log(`Matrice activée au niveau: ${activationLevel}`);
+                showToast('Matrice Stellaire Activée !', 'success');
+                hideModal(activationModal);
+
+                // Initialiser la galaxie si elle est vide (créera le noyau et le sauvegardera)
+                if (planetsData.length === 0) {
+                    await initializeGalaxy();
+                    await addRandomPlanets(5); // Ajoutons quelques planètes après l'activation
+                }
+            });
+        }
+
+        // Explorer Nouveaux Mondes
+        if (exploreBtn) {
+            exploreBtn.addEventListener('click', async () => {
+                await addRandomPlanets(3); // Ajouter 3 nouvelles planètes
+                showToast('Nouveaux mondes découverts !', 'success');
+            });
+        }
+
+        // Établir Connexions
+        if (connectBtn) {
+            connectBtn.addEventListener('click', async () => {
+                await addRandomConnections(planetsData.length > 2 ? 2 : 0); // Ajouter 2 nouvelles connexions si assez de planètes
+                showToast('Connexions interstellaires établies !', 'success');
+            });
+        }
+
+        // Réseau de Communication (simulé)
+        if (commBtn) {
+            commBtn.addEventListener('click', () => {
+                showToast('Réseau de communication synchronisé.', 'info');
+            });
+        }
+
+        // Nova de Réinitialisation
+        if (resetBtn) {
+            resetBtn.addEventListener('click', async () => {
+                // Utilisation d'un modal personnalisé pour la confirmation
+                const confirmReset = await new Promise(resolve => {
+                    const confirmModal = document.createElement('div');
+                    confirmModal.className = 'modal';
+                    confirmModal.innerHTML = `
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2 class="modal-title">Confirmation de Réinitialisation</h2>
+                            </div>
+                            <div class="modal-body">
+                                <p>Voulez-vous vraiment lancer une Nova de Réinitialisation ? Toutes les données de la galaxie seront perdues.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-cancel" id="cancelReset">Annuler</button>
+                                <button class="btn btn-primary danger" id="confirmReset">Confirmer la Réinitialisation</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(confirmModal);
+                    showModal(confirmModal);
+
+                    document.getElementById('cancelReset').onclick = () => { hideModal(confirmModal); confirmModal.remove(); resolve(false); };
+                    document.getElementById('confirmReset').onclick = () => { hideModal(confirmModal); confirmModal.remove(); resolve(true); };
+                });
+
+                if (confirmReset) {
+                    await deleteAllDataInFirestore(); // Supprimer toutes les données de Firestore
+                    // initializeGalaxy() sera appelé par onSnapshot après la suppression
+                    showToast('Nova de Réinitialisation terminée. Matrice réinitialisée.', 'error');
+                }
+            });
+        }
+
+        // --- Fonctions d'ajout dynamique (Firestore-aware) ---
+
+        const addRandomPlanets = async (count) => {
+            const core = planetsData.find(p => p.id === 'core');
+            if (!core) {
+                showToast('Le noyau n\'existe pas. Activez la matrice d\'abord.', 'error');
+                return;
+            }
+
+            const containerRect = galaxyContainer.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+
+            for (let i = 0; i < count; i++) {
+                const newPlanet = {
+                    id: `chatbot-${nextPlanetId++}`,
+                    name: `Civi-IA-${nextPlanetId - 1}`,
+                    type: 'chatbot',
+                    size: Math.random() * 20 + 15,
+                    population: (Math.random() * 500 + 50).toFixed(0) + ' M',
+                    tech: (Math.random() * 90 + 10).toFixed(0) + '%',
+                    connections: 0,
+                    stability: (Math.random() * 80 + 20).toFixed(0) + '%',
+                    description: `Un nouveau monde de civilisation IA découvert, ${Math.random() > 0.5 ? 'riche en ressources' : 'mystérieux et inexploré'}.`
+                };
+
+                newPlanet.originalAngle = Math.random() * Math.PI * 2;
+                newPlanet.originalDistance = Math.random() * (Math.min(containerWidth, containerHeight) / 3 - 50) + 50;
+                newPlanet.x = core.x + newPlanet.originalDistance * Math.cos(newPlanet.originalAngle) - newPlanet.size / 2;
+                newPlanet.y = core.y + newPlanet.originalDistance * Math.sin(newPlanet.originalAngle) - newPlanet.size / 2;
+                newPlanet.x = Math.max(0, Math.min(newPlanet.x, containerWidth - newPlanet.size));
+                newPlanet.y = Math.max(0, Math.min(newPlanet.y, containerHeight - newPlanet.size));
+
+                await savePlanetToFirestore(newPlanet); // Sauvegarder la nouvelle planète dans Firestore
+                // planetsData sera mis à jour via onSnapshot
+            }
+        };
+
+        const addRandomConnections = async (count) => {
+            if (planetsData.length < 2) {
+                showToast('Pas assez de mondes pour créer des connexions !', 'error');
+                return;
+            }
+
+            for (let i = 0; i < count; i++) {
+                let p1, p2;
+                let attempts = 0;
+                do {
+                    p1 = planetsData[Math.floor(Math.random() * planetsData.length)];
+                    p2 = planetsData[Math.floor(Math.random() * planetsData.length)];
+                    attempts++;
+                    if (attempts > 50 && planetsData.length > 2) { // Éviter la boucle infinie si toutes les connexions possibles sont faites
+                        console.warn("Impossible de trouver une nouvelle connexion unique.");
+                        return;
+                    }
+                } while (p1.id === p2.id || connectionsData.some(c => 
+                    (c.from.id === p1.id && c.to.id === p2.id) || 
+                    (c.from.id === p2.id && c.to.id === p1.id)
+                ));
+
+                const docId = await saveConnectionToFirestore({ from: p1, to: p2 }); // Sauvegarder la connexion dans Firestore
+                // connectionsData sera mis à jour via onSnapshot
+            }
+        };
+
+        // --- Logique du Modal de Détails de Planète ---
+        let currentSelectedPlanet = null; // Garder une référence à la planète actuellement affichée
+
+        const showPlanetDetailsModal = (planetData) => {
+            currentSelectedPlanet = planetData; // Définir la planète sélectionnée
+            detailPlanetName.textContent = planetData.name;
+            detailPlanetDescription.textContent = planetData.description || 'Aucune description disponible.';
+            detailPlanetType.textContent = planetData.type;
+            detailPlanetSize.textContent = `${planetData.size}px`;
+            detailPlanetPopulation.textContent = planetData.population;
+            detailPlanetTech.textContent = planetData.tech;
+            detailPlanetConnections.textContent = planetData.connections;
+            detailPlanetStability.textContent = planetData.stability;
+
+            showModal(planetDetailsModal);
+        };
+
+        // Fermeture du modal de détails de planète
+        if (closePlanetDetailsModal) {
+            closePlanetDetailsModal.addEventListener('click', () => {
+                hideModal(planetDetailsModal);
+                currentSelectedPlanet = null; // Réinitialiser la planète sélectionnée
+            });
+        }
+
+        // Bouton "Interagir" dans le modal de détails
+        if (interactWithPlanetBtn) {
+            interactWithPlanetBtn.addEventListener('click', () => {
+                if (currentSelectedPlanet) {
+                    showToast(`Interaction avec ${currentSelectedPlanet.name} initiée !`, 'info');
+                    hideModal(planetDetailsModal);
+                    // Ici, vous pourriez ajouter une logique pour ouvrir une interface de chat spécifique à cette planète,
+                    // ou lancer une mission, etc.
+                }
+            });
+        }
+
+        // Bouton "Supprimer" dans le modal de détails
+        if (deletePlanetBtn) {
+            deletePlanetBtn.addEventListener('click', async () => {
+                if (currentSelectedPlanet && currentSelectedPlanet.id !== 'core') { // Ne pas supprimer le noyau
+                    const confirmDelete = await new Promise(resolve => {
+                        const confirmModal = document.createElement('div');
+                        confirmModal.className = 'modal';
+                        confirmModal.innerHTML = `
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h2 class="modal-title">Confirmer la Suppression</h2>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Voulez-vous vraiment supprimer le monde "${currentSelectedPlanet.name}" ? Cette action est irréversible.</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn btn-cancel" id="cancelDelete">Annuler</button>
+                                    <button class="btn btn-primary danger" id="confirmDelete">Confirmer la Suppression</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(confirmModal);
+                        showModal(confirmModal);
+
+                        document.getElementById('cancelDelete').onclick = () => { hideModal(confirmModal); confirmModal.remove(); resolve(false); };
+                        document.getElementById('confirmDelete').onclick = () => { hideModal(confirmModal); confirmModal.remove(); resolve(true); };
+                    });
+
+                    if (confirmDelete) {
+                        await deletePlanetFromFirestore(currentSelectedPlanet.id);
+                        hideModal(planetDetailsModal);
+                        currentSelectedPlanet = null;
+                    }
+                } else if (currentSelectedPlanet && currentSelectedPlanet.id === 'core') {
+                    showToast("Le Noyau NeuraX ne peut pas être supprimé !", "error");
+                }
+            });
+        }
+
+
+        // --- Initialisation au chargement de la page ---
+        document.addEventListener('DOMContentLoaded', () => {
+            generateStars(); // Génère les étoiles de fond
+            resizeUniverseCanvas(); // Initialise la taille du canvas d'univers
+            initializeFirebase(); // Démarre l'initialisation Firebase et l'authentification
+
+            // Gérer le redimensionnement de la fenêtre pour la réactivité de la galaxie
+            window.addEventListener('resize', () => {
+                positionPlanets(); // Recalculer les positions
+                renderGalaxy();    // Redessiner la galaxie
+            });
+        });
+    </script>
+</body>
+</html>
