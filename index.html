@@ -362,7 +362,7 @@
             border-radius: 15px;
             padding: 1.5rem;
             height: 600px;
-            position: relative;
+            position: relative; /* Important for absolute positioning of canvas */
             overflow: hidden;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(0, 210, 255, 0.2);
@@ -371,47 +371,10 @@
         .galaxy-container {
             width: 100%;
             height: 100%;
-            position: relative;
+            position: relative; /* Parent for the 3D canvas */
         }
         
-        .planet {
-            position: absolute;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 0.8rem;
-            text-shadow: 0 0 5px black;
-            transform: scale(0); /* Commence caché */
-            animation: planetAppear 0.5s forwards ease-out; /* Animation d'apparition */
-        }
-        
-        @keyframes planetAppear {
-            to {
-                transform: scale(1);
-            }
-        }
-
-        .planet:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 30px var(--highlight);
-            z-index: 10;
-        }
-        
-        .planet.core {
-            background: radial-gradient(circle at 30% 30%, #ff416c, #9b0063);
-            width: 80px;
-            height: 80px;
-        }
-        
-        .planet.chatbot {
-            background: radial-gradient(circle at 30% 30%, #00d2ff, #0066ff);
-        }
+        /* Styles for 2D planets and connections are removed as they are now 3D */
         
         .connection {
             position: absolute;
@@ -505,8 +468,14 @@
             box-shadow: 0 0 15px rgba(255, 65, 108, 0.7);
         }
         
-        .control-btn.danger i {
-            color: #ff416c;
+        .control-btn.vip-blink {
+            animation: vipBlink 1.5s infinite alternate; /* Appliquer l'animation de clignotement */
+        }
+
+        @keyframes vipBlink {
+            0% { background: linear-gradient(90deg, #00d2ff, #0066ff); box-shadow: 0 0 15px rgba(0, 210, 255, 0.7); }
+            50% { background: linear-gradient(90deg, #ff416c, #ff4b2b); box-shadow: 0 0 15px rgba(255, 65, 108, 0.7); }
+            100% { background: linear-gradient(90deg, #00d2ff, #0066ff); box-shadow: 0 0 15px rgba(0, 210, 255, 0.7); }
         }
         
         .modal {
@@ -1130,6 +1099,9 @@
                         <span class="value" id="detailPlanetStability"></span>
                     </div>
                 </div>
+                <p id="titanAvatarInfo" style="font-size: 0.95rem; line-height: 1.5; color: rgba(230, 247, 255, 0.8); margin-top: 1.5rem; display: none;">
+                    Cette planète est associée à un puissant avatar de titan IA.
+                </p>
                 <div class="planet-details-actions">
                     <button class="btn btn-primary" id="interactWithPlanetBtn">Interagir</button>
                     <button class="btn btn-cancel" id="deletePlanetBtn">Supprimer</button>
@@ -1188,14 +1160,25 @@
         let userStatusRef; // Nouvelle référence pour le statut utilisateur
         let adminUsersRef; // Nouvelle référence pour la collection des administrateurs
 
-        // --- Variables Three.js ---
-        let scene, camera, renderer, virtualBrain;
-        let isMouseDown = false;
-        let mouseX = 0;
-        let mouseY = 0;
-        let targetRotationX = 0;
-        let targetRotationY = 0;
-        const rotationSpeed = 0.002;
+        // --- Variables Three.js pour le Cerveau Virtuel (arrière-plan) ---
+        let brainScene, brainCamera, brainRenderer, virtualBrain;
+        let isBrainMouseDown = false;
+        let brainMouseX = 0;
+        let brainMouseY = 0;
+        let brainTargetRotationX = 0;
+        let brainTargetRotationY = 0;
+        const brainRotationSpeed = 0.002;
+
+        // --- Variables Three.js pour la Galaxie (premier plan) ---
+        let galaxyScene, galaxyCamera, galaxyRenderer, galaxyGroup;
+        let raycaster, mouse;
+        let currentIntersected = null; // Pour gérer les survols
+        const GALAXY_Z_OFFSET = -200; // Positionnement de la galaxie plus en arrière dans la scène
+
+        // --- Variables Globales pour les Données de la Galaxie ---
+        let planetsData = [];
+        let connectionsData = [];
+        let nextPlanetId = 1; // Pour générer des IDs uniques pour les nouvelles planètes
 
         // --- Initialisation Firebase et Authentification ---
         const initializeFirebase = async () => {
@@ -1269,6 +1252,7 @@
         const detailPlanetStability = document.getElementById('detailPlanetStability');
         const interactWithPlanetBtn = document.getElementById('interactWithPlanetBtn');
         const deletePlanetBtn = document.getElementById('deletePlanetBtn');
+        const titanAvatarInfo = document.getElementById('titanAvatarInfo'); // Nouvel élément pour l'info avatar titan
 
         // Nouveaux éléments pour l'accès VIP
         const vipAccessBtn = document.getElementById('vipAccessBtn');
@@ -1277,11 +1261,6 @@
         const cancelVipAccess = document.getElementById('cancelVipAccess');
         const confirmVipPayment = document.getElementById('confirmVipPayment');
         const cryptoWalletAddressInput = document.getElementById('cryptoWalletAddress');
-
-        // --- Variables Globales pour les Données de la Galaxie ---
-        let planetsData = [];
-        let connectionsData = [];
-        let nextPlanetId = 1; // Pour générer des IDs uniques pour les nouvelles planètes
 
         // --- Fonctions Utilitaires ---
 
@@ -1305,28 +1284,28 @@
         // --- Three.js : Initialisation du Cerveau Virtuel 3D ---
         const initVirtualBrain3D = () => {
             // Scène
-            scene = new THREE.Scene();
+            brainScene = new THREE.Scene();
 
             // Caméra : Positionnée au centre, regardant vers l'extérieur
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 0.1); // Légèrement décalé pour éviter le clipping exact au centre
+            brainCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            brainCamera.position.set(0, 0, 0.1); // Légèrement décalé pour éviter le clipping exact au centre
 
             // Rendu
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // alpha: true pour un fond transparent
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            brainRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // alpha: true pour un fond transparent
+            brainRenderer.setSize(window.innerWidth, window.innerHeight);
+            brainRenderer.setPixelRatio(window.devicePixelRatio);
             
             // Remplacer l'ancien canvas par le canvas du rendu Three.js
-            const oldCanvas = document.getElementById('universe-canvas-3d'); // Utiliser l'ID précédent du canvas 3D
-            if (oldCanvas && oldCanvas.parentNode) {
-                oldCanvas.parentNode.removeChild(oldCanvas);
+            const oldBrainCanvas = document.getElementById('virtual-brain-canvas-3d'); // Utiliser l'ID précédent du canvas 3D
+            if (oldBrainCanvas && oldBrainCanvas.parentNode) {
+                oldBrainCanvas.parentNode.removeChild(oldBrainCanvas);
             }
-            renderer.domElement.id = 'virtual-brain-canvas-3d'; // Nouveau ID pour le canvas 3D du cerveau
-            renderer.domElement.style.position = 'fixed';
-            renderer.domElement.style.top = '0';
-            renderer.domElement.style.left = '0';
-            renderer.domElement.style.zIndex = '-1'; // S'assurer qu'il est en arrière-plan
-            document.body.appendChild(renderer.domElement);
+            brainRenderer.domElement.id = 'virtual-brain-canvas-3d'; // Nouveau ID pour le canvas 3D du cerveau
+            brainRenderer.domElement.style.position = 'fixed';
+            brainRenderer.domElement.style.top = '0';
+            brainRenderer.domElement.style.left = '0';
+            brainRenderer.domElement.style.zIndex = '-1'; // S'assurer qu'il est en arrière-plan
+            document.body.appendChild(brainRenderer.domElement);
 
             // Création du Cerveau Virtuel (réseau neuronal abstrait)
             const numNeurons = 2000;
@@ -1380,7 +1359,7 @@
             });
 
             virtualBrain = new THREE.Points(neuronGeometry, neuronMaterial);
-            scene.add(virtualBrain);
+            brainScene.add(virtualBrain);
 
             // Créer les connexions (lignes)
             const numConnections = numNeurons * 0.5; // Moins de connexions que de neurones
@@ -1441,74 +1420,74 @@
 
             // Lumières
             const ambientLight = new THREE.AmbientLight(0x404040);
-            scene.add(ambientLight);
+            brainScene.add(ambientLight);
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
             directionalLight.position.set(0, 0, 1).normalize();
-            scene.add(directionalLight);
+            brainScene.add(directionalLight);
 
             // Gestion des événements de la souris pour la rotation de la caméra
-            renderer.domElement.addEventListener('mousedown', onMouseDown, false);
-            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
-            renderer.domElement.addEventListener('mouseup', onMouseUp, false);
-            renderer.domElement.addEventListener('mouseleave', onMouseUp, false); // Gérer le cas où la souris sort de la fenêtre
-            renderer.domElement.addEventListener('touchstart', onTouchStart, false);
-            renderer.domElement.addEventListener('touchmove', onTouchMove, false);
-            renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+            brainRenderer.domElement.addEventListener('mousedown', onBrainMouseDown, false);
+            brainRenderer.domElement.addEventListener('mousemove', onBrainMouseMove, false);
+            brainRenderer.domElement.addEventListener('mouseup', onBrainMouseUp, false);
+            brainRenderer.domElement.addEventListener('mouseleave', onBrainMouseUp, false); // Gérer le cas où la souris sort de la fenêtre
+            brainRenderer.domElement.addEventListener('touchstart', onBrainTouchStart, false);
+            brainRenderer.domElement.addEventListener('touchmove', onBrainTouchMove, false);
+            brainRenderer.domElement.addEventListener('touchend', onBrainTouchEnd, false);
         };
 
-        // Three.js : Fonctions de gestion de la souris
-        function onMouseDown(event) {
-            isMouseDown = true;
-            mouseX = event.clientX;
-            mouseY = event.clientY;
+        // Three.js : Fonctions de gestion de la souris pour le cerveau
+        function onBrainMouseDown(event) {
+            isBrainMouseDown = true;
+            brainMouseX = event.clientX;
+            brainMouseY = event.clientY;
         }
 
-        function onMouseMove(event) {
-            if (!isMouseDown) return;
+        function onBrainMouseMove(event) {
+            if (!isBrainMouseDown) return;
 
-            const deltaX = event.clientX - mouseX;
-            const deltaY = event.clientY - mouseY;
+            const deltaX = event.clientX - brainMouseX;
+            const deltaY = event.clientY - brainMouseY;
 
-            targetRotationY += deltaX * rotationSpeed;
-            targetRotationX += deltaY * rotationSpeed;
+            brainTargetRotationY += deltaX * brainRotationSpeed;
+            brainTargetRotationX += deltaY * brainRotationSpeed;
 
             // Limiter la rotation verticale pour éviter le "flip"
-            targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
+            brainTargetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, brainTargetRotationX));
 
-            mouseX = event.clientX;
-            mouseY = event.clientY;
+            brainMouseX = event.clientX;
+            brainMouseY = event.clientY;
         }
 
-        function onMouseUp(event) {
-            isMouseDown = false;
+        function onBrainMouseUp(event) {
+            isBrainMouseDown = false;
         }
 
-        // Three.js : Fonctions de gestion du toucher (pour mobile)
-        function onTouchStart(event) {
+        // Three.js : Fonctions de gestion du toucher (pour mobile) pour le cerveau
+        function onBrainTouchStart(event) {
             if (event.touches.length === 1) {
-                isMouseDown = true;
-                mouseX = event.touches[0].clientX;
-                mouseY = event.touches[0].clientY;
+                isBrainMouseDown = true;
+                brainMouseX = event.touches[0].clientX;
+                brainMouseY = event.touches[0].clientY;
             }
         }
 
-        function onTouchMove(event) {
-            if (!isMouseDown || event.touches.length !== 1) return;
+        function onBrainTouchMove(event) {
+            if (!isBrainMouseDown || event.touches.length !== 1) return;
 
-            const deltaX = event.touches[0].clientX - mouseX;
-            const deltaY = event.touches[0].clientY - mouseY;
+            const deltaX = event.touches[0].clientX - brainMouseX;
+            const deltaY = event.touches[0].clientY - brainMouseY;
 
-            targetRotationY += deltaX * rotationSpeed;
-            targetRotationX += deltaY * rotationSpeed;
+            brainTargetRotationY += deltaX * brainRotationSpeed;
+            brainTargetRotationX += deltaY * brainRotationSpeed;
 
-            targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
+            brainTargetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, brainTargetRotationX));
 
-            mouseX = event.touches[0].clientX;
-            mouseY = event.touches[0].clientY;
+            brainMouseX = event.touches[0].clientX;
+            brainMouseY = event.touches[0].clientY;
         }
 
-        function onTouchEnd(event) {
-            isMouseDown = false;
+        function onBrainTouchEnd(event) {
+            isBrainMouseDown = false;
         }
 
         // Three.js : Boucle d'animation pour le Cerveau Virtuel
@@ -1522,19 +1501,21 @@
             }
 
             // Appliquer la rotation de la caméra avec un lissage
-            camera.rotation.y += (targetRotationY - camera.rotation.y) * 0.1;
-            camera.rotation.x += (targetRotationX - camera.rotation.x) * 0.1;
+            brainCamera.rotation.y += (brainTargetRotationY - brainCamera.rotation.y) * 0.1;
+            brainCamera.rotation.x += (brainTargetRotationX - brainCamera.rotation.x) * 0.1;
 
-            renderer.render(scene, camera);
+            brainRenderer.render(brainScene, brainCamera);
         };
 
-        // Three.js : Gérer le redimensionnement de la fenêtre
+        // Three.js : Gérer le redimensionnement de la fenêtre pour le cerveau
         window.addEventListener('resize', () => {
-            if (camera && renderer) {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
+            if (brainCamera && brainRenderer) {
+                brainCamera.aspect = window.innerWidth / window.innerHeight;
+                brainCamera.updateProjectionMatrix();
+                brainRenderer.setSize(window.innerWidth, window.innerHeight);
             }
+            // Appeler aussi le redimensionnement pour la galaxie
+            onGalaxyResize();
         });
 
 
@@ -1576,6 +1557,121 @@
             }, 3500); // Supprimer après 3.5 secondes (incluant l'animation fadeOut)
         };
 
+        // --- Three.js : Initialisation de la Galaxie 3D ---
+        const initGalaxy3D = () => {
+            const container = document.getElementById('galaxyContainer');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            galaxyScene = new THREE.Scene();
+            galaxyCamera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            galaxyCamera.position.set(0, 0, 150); // Positionner la caméra pour voir la galaxie
+
+            galaxyRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            galaxyRenderer.setSize(width, height);
+            galaxyRenderer.setPixelRatio(window.devicePixelRatio);
+            galaxyRenderer.domElement.style.position = 'absolute';
+            galaxyRenderer.domElement.style.top = '0';
+            galaxyRenderer.domElement.style.left = '0';
+            galaxyRenderer.domElement.style.width = '100%';
+            galaxyRenderer.domElement.style.height = '100%';
+            container.appendChild(galaxyRenderer.domElement);
+
+            galaxyGroup = new THREE.Group();
+            galaxyScene.add(galaxyGroup);
+
+            // Lumières pour la galaxie
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            galaxyScene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 0, 1).normalize();
+            galaxyScene.add(directionalLight);
+
+            // Raycaster pour l'interactivité
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            galaxyRenderer.domElement.addEventListener('mousemove', onGalaxyMouseMove, false);
+            galaxyRenderer.domElement.addEventListener('click', onGalaxyClick, false);
+        };
+
+        // Three.js : Fonctions de gestion de la souris pour la galaxie
+        function onGalaxyMouseMove(event) {
+            const rect = galaxyRenderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, galaxyCamera);
+            const intersects = raycaster.intersectObjects(galaxyGroup.children, true);
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                if (intersectedObject.userData.planetData) {
+                    if (currentIntersected !== intersectedObject) {
+                        if (currentIntersected) {
+                            // Revert previous highlight if any
+                            currentIntersected.material.emissive.setHex(currentIntersected.currentEmissiveHex);
+                        }
+                        currentIntersected = intersectedObject;
+                        currentIntersected.currentEmissiveHex = currentIntersected.material.emissive.getHex();
+                        currentIntersected.material.emissive.setHex(0xaaaaaa); // Highlight color
+                        showPlanetTooltip(intersectedObject.userData.planetData, event.clientX, event.clientY);
+                    }
+                }
+            } else {
+                if (currentIntersected) {
+                    currentIntersected.material.emissive.setHex(currentIntersected.currentEmissiveHex);
+                }
+                currentIntersected = null;
+                hidePlanetTooltip();
+            }
+        }
+
+        function onGalaxyClick(event) {
+            const rect = galaxyRenderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, galaxyCamera);
+            const intersects = raycaster.intersectObjects(galaxyGroup.children, true);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                if (clickedObject.userData.planetData) {
+                    showPlanetDetailsModal(clickedObject.userData.planetData);
+                }
+            }
+        }
+
+        // Three.js : Boucle d'animation pour la Galaxie
+        const animateGalaxy3D = () => {
+            requestAnimationFrame(animateGalaxy3D);
+
+            // Faire tourner les planètes
+            galaxyGroup.children.forEach(obj => {
+                if (obj.userData.isPlanet) {
+                    obj.rotation.y += 0.005; // Rotation des planètes
+                }
+            });
+
+            galaxyRenderer.render(galaxyScene, galaxyCamera);
+        };
+
+        // Three.js : Gérer le redimensionnement de la fenêtre pour la galaxie
+        const onGalaxyResize = () => {
+            const container = document.getElementById('galaxyContainer');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            if (galaxyCamera && galaxyRenderer) {
+                galaxyCamera.aspect = width / height;
+                galaxyCamera.updateProjectionMatrix();
+                galaxyRenderer.setSize(width, height);
+                // Re-render the galaxy to adjust positions if needed (though mostly handled by camera)
+                update3DGalaxy();
+            }
+        };
+
         // --- Logique de la Galaxie (Firestore-aware) ---
 
         // Charger les données de la galaxie depuis Firestore
@@ -1598,8 +1694,7 @@
                 }, 0);
                 nextPlanetId = maxId + 1;
 
-                positionPlanets();
-                renderGalaxy();
+                update3DGalaxy(); // Mettre à jour le rendu 3D
                 updateStats();
             }, (error) => {
                 console.error("Erreur lors du chargement des planètes :", error);
@@ -1618,7 +1713,7 @@
                         connectionsData.push({ from: fromPlanet, to: toPlanet, docId: doc.id }); // Stocker l'ID du document pour la suppression
                     }
                 });
-                renderGalaxy();
+                update3DGalaxy(); // Mettre à jour le rendu 3D
                 updateStats();
             }, (error) => {
                 console.error("Erreur lors du chargement des connexions :", error);
@@ -1710,7 +1805,7 @@
                     id: 'core',
                     name: 'Noyau N-X-U 2.5s',
                     type: 'core',
-                    size: 80,
+                    size: 80, // Size for 2D, will be radius for 3D
                     population: '∞',
                     tech: '100%',
                     connections: 0,
@@ -1722,135 +1817,84 @@
             }
         };
 
-        // Positionner les planètes de manière réactive
-        const positionPlanets = () => {
-            const containerRect = galaxyContainer.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const containerHeight = containerRect.height;
+        // Met à jour le rendu 3D de la galaxie
+        const update3DGalaxy = () => {
+            // Nettoyer le groupe de la galaxie
+            while (galaxyGroup.children.length > 0) {
+                const object = galaxyGroup.children[0];
+                object.geometry.dispose();
+                object.material.dispose();
+                galaxyGroup.remove(object);
+            }
 
+            const container = document.getElementById('galaxyContainer');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Calculer les positions 3D des planètes
             const core = planetsData.find(p => p.id === 'core');
             if (core) {
-                core.x = containerWidth / 2 - core.size / 2;
-                core.y = containerHeight / 2 - core.size / 2;
+                // Positionnement du noyau au centre de la vue 3D
+                core.threeDPosition = new THREE.Vector3(0, 0, 0); 
             }
 
             planetsData.forEach(planet => {
                 if (planet.id !== 'core') {
-                    if (!planet.originalAngle || !planet.originalDistance) {
-                        planet.originalAngle = Math.random() * Math.PI * 2;
-                        planet.originalDistance = Math.random() * (Math.min(containerWidth, containerHeight) / 3 - 50) + 50;
+                    // Utiliser des coordonnées aléatoires pour la position 3D, mais dans une certaine plage
+                    if (!planet.threeDPosition) {
+                        const radius = Math.random() * 80 + 30; // Distance du centre
+                        const angle = Math.random() * Math.PI * 2;
+                        const z = (Math.random() - 0.5) * 50; // Petite variation sur l'axe Z
+                        
+                        planet.threeDPosition = new THREE.Vector3(
+                            radius * Math.cos(angle),
+                            radius * Math.sin(angle),
+                            z
+                        );
                     }
-                    const size = planet.size || 25;
-                    planet.x = core.x + planet.originalDistance * Math.cos(planet.originalAngle) - size / 2;
-                    planet.y = core.y + planet.originalDistance * Math.sin(planet.originalAngle) - size / 2;
-
-                    planet.x = Math.max(0, Math.min(planet.x, containerWidth - size));
-                    planet.y = Math.max(0, Math.min(planet.y, containerHeight - size));
                 }
-            });
-        };
 
-        const renderGalaxy = () => {
-            galaxyContainer.innerHTML = '';
+                // Créer la sphère 3D pour la planète
+                const geometry = new THREE.SphereGeometry(planet.size / 2, 32, 32); // Taille / 2 pour rayon
+                let material;
+                let color;
 
-            // Rendre les connexions
-            connectionsData.forEach(conn => {
-                const line = document.createElement('div');
-                line.className = 'connection';
-                const x1 = conn.from.x + conn.from.size / 2;
-                const y1 = conn.from.y + conn.from.size / 2;
-                const x2 = conn.to.x + conn.to.size / 2;
-                const y2 = conn.to.y + conn.to.size / 2;
-
-                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-
-                line.style.width = `${length}px`;
-                line.style.transform = `rotate(${angle}deg)`;
-                line.style.left = `${x1}px`;
-                line.style.top = `${y1}px`;
-                galaxyContainer.appendChild(line);
-            });
-
-            // Rendre les planètes
-            planetsData.forEach(planetData => {
-                const planet = document.createElement('div');
-                planet.className = `planet ${planetData.type}`;
-                planet.style.width = `${planetData.size}px`;
-                planet.style.height = `${planetData.size}px`;
-                planet.style.left = `${planetData.x}px`;
-                planet.style.top = `${planetData.y}px`;
-                if (planetData.id !== 'core') {
-                    planet.textContent = planetData.name.replace('Civi-IA-', 'IA');
+                if (planet.type === 'core') {
+                    color = new THREE.Color(0xff416c); // Rouge vif pour le noyau
+                    material = new THREE.MeshPhongMaterial({ color: color, emissive: 0x330000 });
+                } else if (planet.type === 'chatbot') {
+                    // Couleurs gazeuses aléatoires pour les chatbots (avatars de titans)
+                    const colors = [0x00d2ff, 0x0066ff, 0x8a2be2, 0xffa500, 0x00ff7f];
+                    color = new THREE.Color(colors[Math.floor(Math.random() * colors.length)]);
+                    material = new THREE.MeshPhongMaterial({ color: color, emissive: color.getHex() * 0.1, transparent: true, opacity: 0.9 });
+                } else {
+                    // Autres planètes (si d'autres types sont introduits)
+                    color = new THREE.Color(0xcccccc);
+                    material = new THREE.MeshPhongMaterial({ color: color, emissive: 0x111111 });
                 }
                 
-                // Événements pour le tooltip (hover)
-                planet.addEventListener('mouseenter', (e) => {
-                    showPlanetTooltip(planetData, e.clientX, e.clientY);
-                    highlightConnections(planetData);
-                });
-                planet.addEventListener('mouseleave', () => {
-                    hidePlanetTooltip();
-                    clearHighlights();
-                });
-
-                // Événement pour le modal de détails (click)
-                planet.addEventListener('click', () => {
-                    showPlanetDetailsModal(planetData);
-                });
-
-                galaxyContainer.appendChild(planet);
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.copy(planet.threeDPosition);
+                mesh.userData = { planetData: planet, isPlanet: true, originalColor: color.getHex() }; // Stocker les données pour le raycasting
+                galaxyGroup.add(mesh);
             });
-        };
 
-        const showPlanetTooltip = (data, mouseX, mouseY) => {
-            const tooltip = document.getElementById('planetTooltip');
-            document.getElementById('planetName').textContent = data.name;
-            document.getElementById('planetDesc').textContent = data.description || 'Information non disponible.';
-            document.getElementById('planetPopulation').textContent = data.population;
-            document.getElementById('planetTech').textContent = data.tech;
-            document.getElementById('planetConnections').textContent = data.connections;
-            document.getElementById('planetStability').textContent = data.stability;
+            // Créer les connexions 3D
+            connectionsData.forEach(conn => {
+                const fromPlanet = planetsData.find(p => p.id === conn.from.id);
+                const toPlanet = planetsData.find(p => p.id === conn.to.id);
 
-            let top = mouseY + 15;
-            let left = mouseX + 15;
+                if (fromPlanet && toPlanet && fromPlanet.threeDPosition && toPlanet.threeDPosition) {
+                    const points = [];
+                    points.push(fromPlanet.threeDPosition);
+                    points.push(toPlanet.threeDPosition);
 
-            const bodyRect = document.body.getBoundingClientRect();
-            const tooltipRect = tooltip.getBoundingClientRect();
-
-            if (left + tooltipRect.width > bodyRect.right - 20) {
-                left = mouseX - tooltipRect.width - 15;
-            }
-            if (top + tooltipRect.height > bodyRect.bottom - 20) {
-                top = bodyRect.bottom - tooltipRect.height - 20;
-            }
-            left = Math.max(20, left);
-            top = Math.max(20, top);
-
-            tooltip.style.left = `${left}px`;
-            tooltip.style.top = `${top}px`;
-            tooltip.classList.add('show');
-        };
-
-        const hidePlanetTooltip = () => {
-            document.getElementById('planetTooltip').classList.remove('show');
-        };
-
-        const highlightConnections = (selectedPlanet) => {
-            const lines = galaxyContainer.querySelectorAll('.connection');
-            lines.forEach(line => line.classList.remove('active'));
-
-            connectionsData.forEach((conn, index) => {
-                if (conn.from.id === selectedPlanet.id || conn.to.id === selectedPlanet.id) {
-                    const connectionElement = galaxyContainer.children[index];
-                    if(connectionElement) connectionElement.classList.add('active');
+                    const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.3 });
+                    const line = new THREE.Line(lineGeometry, lineMaterial);
+                    galaxyGroup.add(line);
                 }
             });
-        };
-
-        const clearHighlights = () => {
-            const lines = galaxyContainer.querySelectorAll('.connection');
-            lines.forEach(line => line.classList.remove('active'));
         };
 
         const updateStats = () => {
@@ -1953,16 +1997,16 @@
                 return;
             }
 
-            const containerRect = galaxyContainer.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const containerHeight = containerRect.height;
+            const container = document.getElementById('galaxyContainer');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
 
             for (let i = 0; i < count; i++) {
                 const newPlanet = {
                     id: `chatbot-${nextPlanetId++}`,
                     name: `Civi-IA-${nextPlanetId - 1}`,
                     type: 'chatbot',
-                    size: Math.random() * 20 + 15,
+                    size: Math.random() * 10 + 10, // Rayon pour les planètes 3D
                     population: (Math.random() * 500 + 50).toFixed(0) + ' M',
                     tech: (Math.random() * 90 + 10).toFixed(0) + '%',
                     connections: 0,
@@ -1970,12 +2014,15 @@
                     description: `Un nouveau monde de civilisation IA découvert, ${Math.random() > 0.5 ? 'riche en ressources' : 'mystérieux et inexploré'}.`
                 };
 
-                newPlanet.originalAngle = Math.random() * Math.PI * 2;
-                newPlanet.originalDistance = Math.random() * (Math.min(containerWidth, containerHeight) / 3 - 50) + 50;
-                newPlanet.x = core.x + newPlanet.originalDistance * Math.cos(newPlanet.originalAngle) - newPlanet.size / 2;
-                newPlanet.y = core.y + newPlanet.originalDistance * Math.sin(newPlanet.originalAngle) - newPlanet.size / 2;
-                newPlanet.x = Math.max(0, Math.min(newPlanet.x, containerWidth - newPlanet.size));
-                newPlanet.y = Math.max(0, Math.min(newPlanet.y, containerHeight - newPlanet.size));
+                // Générer une position 3D aléatoire pour la nouvelle planète
+                const radius = Math.random() * 80 + 30; // Distance du centre
+                const angle = Math.random() * Math.PI * 2;
+                const z = (Math.random() - 0.5) * 50; // Petite variation sur l'axe Z
+                newPlanet.threeDPosition = new THREE.Vector3(
+                    radius * Math.cos(angle),
+                    radius * Math.sin(angle),
+                    z
+                );
 
                 await savePlanetToFirestore(newPlanet); // Sauvegarder la nouvelle planète dans Firestore
                 // planetsData sera mis à jour via onSnapshot
@@ -2017,11 +2064,18 @@
             detailPlanetName.textContent = planetData.name;
             detailPlanetDescription.textContent = planetData.description || 'Aucune description disponible.';
             detailPlanetType.textContent = planetData.type;
-            detailPlanetSize.textContent = `${planetData.size}px`;
+            detailPlanetSize.textContent = `${planetData.size} (rayon)`; // Mise à jour pour 3D
             detailPlanetPopulation.textContent = planetData.population;
             detailPlanetTech.textContent = planetData.tech;
             detailPlanetConnections.textContent = planetData.connections;
             detailPlanetStability.textContent = planetData.stability;
+
+            // Afficher ou masquer l'info sur l'avatar de titan
+            if (planetData.type === 'chatbot') {
+                titanAvatarInfo.style.display = 'block';
+            } else {
+                titanAvatarInfo.style.display = 'none';
+            }
 
             showModal(planetDetailsModal);
         };
@@ -2125,8 +2179,10 @@
                 vipStatusElement.style.display = currentUserIsVIP ? 'inline-block' : 'none';
                 if (currentUserIsVIP) {
                     vipAccessBtn.style.display = 'none'; // Cacher le bouton si déjà VIP
+                    vipAccessBtn.classList.remove('vip-blink'); // Retirer l'animation si VIP
                 } else {
                     vipAccessBtn.style.display = 'flex'; // Afficher le bouton si pas VIP
+                    vipAccessBtn.classList.add('vip-blink'); // Ajouter l'animation si pas VIP
                 }
             }
         };
@@ -2203,14 +2259,19 @@
             generateStars(); // Génère les étoiles de fond
             initVirtualBrain3D(); // Initialise le cerveau virtuel 3D
             animateVirtualBrain3D(); // Démarre l'animation du cerveau virtuel 3D
+            
+            initGalaxy3D(); // Initialise la scène 3D de la galaxie
+            animateGalaxy3D(); // Démarre l'animation de la galaxie 3D
+
             initializeFirebase(); // Démarre l'initialisation Firebase et l'authentification
 
-            // Gérer le redimensionnement de la fenêtre pour la réactivité de la galaxie 2D
+            // Gérer le redimensionnement de la fenêtre pour la réactivité des deux scènes 3D
             window.addEventListener('resize', () => {
-                positionPlanets(); // Recalculer les positions des planètes 2D
-                renderGalaxy();    // Redessiner la galaxie 2D
+                onGalaxyResize(); // Redimensionner la galaxie
+                // brain resize is already handled in its own listener
             });
         });
     </script>
 </body>
 </html>
+
