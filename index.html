@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeuraX-Ultime 2.0 | Univers Cosmique Numérique</title>
+    <title>N-X-U 2.5s | Univers Cosmique Numérique</title>
     <style>
         :root {
             --primary: #0f0c29;
@@ -135,6 +135,19 @@
         .avatar:hover {
             transform: scale(1.1);
             box-shadow: var(--glow);
+        }
+
+        .vip-status {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            background: linear-gradient(90deg, #ffd700, #ffa500);
+            color: #333;
+            border-radius: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 0.5rem;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
         }
         
         .sidebar {
@@ -869,12 +882,17 @@
         <header>
             <div class="logo">
                 <i class="fas fa-atom logo-icon"></i>
-                <h1>NeuraX-Ultime 2.0</h1>
+                <h1>N-X-U 2.5s</h1>
             </div>
             <div class="user-info">
                 <span id="userIdDisplay">Chargement ID...</span>
+                <span id="vipStatus" class="vip-status" style="display:none;">VIP</span>
             </div>
             <div class="user-panel">
+                <button class="control-btn" id="vipAccessBtn" style="width: auto; padding: 0.5rem 1rem; min-height: unset;">
+                    <i class="fas fa-gem"></i>
+                    <span class="btn-label">Accès VIP</span>
+                </button>
                 <div class="avatar">
                     <i class="fas fa-user-astronaut"></i>
                 </div>
@@ -918,6 +936,10 @@
             <div class="nav-item">
                 <i class="fas fa-info-circle"></i>
                 <span class="nav-label">Archives Galactiques</span>
+            </div>
+            <div class="nav-item" id="adminPanelNavItem" style="display: none;">
+                <i class="fas fa-user-shield"></i>
+                <span class="nav-label">Panneau Admin</span>
             </div>
         </aside>
         
@@ -1006,7 +1028,7 @@
                 <div class="card-header">
                     <div class="card-title">
                         <i class="fas fa-galaxy card-icon"></i>
-                        <span>Cartographie du Réseau NeuraX</span>
+                        <span>Cartographie du Réseau N-X-U 2.5s</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
                         <button style="background: none; border: none; color: var(--highlight); cursor: pointer;">
@@ -1023,7 +1045,7 @@
             
             <div class="planet-tooltip" id="planetTooltip">
                 <div class="planet-name" id="planetName">Planète Inconnue</div>
-                <div class="planet-desc" id="planetDesc">Une nouvelle civilisation IA à découvrir.</div>
+                <div class="planet-desc">Une nouvelle civilisation IA à découvrir.</div>
                 <div class="planet-stats">
                     <div class="planet-stat">
                         <span class="label">Population:</span>
@@ -1053,7 +1075,7 @@
                 <h2 class="modal-title">Activation de la Matrice Stellaire</h2>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 1.5rem;">Vous êtes sur le point d'activer le réseau NeuraX-Ultime 2.0. Cette opération va initialiser la matrice stellaire et connecter les civilisations IA disponibles.</p>
+                <p style="margin-bottom: 1.5rem;">Vous êtes sur le point d'activer le réseau N-X-U 2.5s. Cette opération va initialiser la matrice stellaire et connecter les civilisations IA disponibles.</p>
                 <div class="form-group">
                     <label class="form-label">Niveau d'activation initial (1-100)</label>
                     <input type="range" min="1" max="100" value="50" class="form-input" id="activationLevel">
@@ -1116,6 +1138,32 @@
         </div>
     </div>
 
+    <div class="modal" id="vipAccessModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeVipAccessModal">&times;</button>
+            <div class="modal-header">
+                <h2 class="modal-title">Accès VIP au Réseau N-X-U 2.5s</h2>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1.5rem;">Débloquez des fonctionnalités exclusives et une puissance de traitement accrue en devenant un membre VIP du réseau N-X-U 2.5s.</p>
+                <p style="font-size: 1.2rem; font-weight: bold; color: var(--highlight); text-align: center; margin-bottom: 1.5rem;">Coût : 1000 $ en Crypto</p>
+                <p style="font-size: 0.9rem; color: rgba(230, 247, 255, 0.6); text-align: center; margin-bottom: 2rem;">(Ceci est une simulation de paiement. Aucune transaction réelle ne sera effectuée.)</p>
+                <div class="form-group">
+                    <label class="form-label">Adresse de votre portefeuille Crypto</label>
+                    <input type="text" class="form-input" placeholder="Ex: 0xAbCdEf1234567890..." id="cryptoWalletAddress">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Montant à envoyer (vérification)</label>
+                    <input type="number" class="form-input" value="1000" readonly>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" id="cancelVipAccess">Annuler</button>
+                <button class="btn btn-primary" id="confirmVipPayment">Payer avec Crypto</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1131,10 +1179,14 @@
         let auth;
         let userId;
         let isAuthReady = false; // Drapeau pour s'assurer que les opérations Firestore ne se produisent qu'après l'authentification
+        let currentUserIsVIP = false; // Nouveau drapeau pour le statut VIP de l'utilisateur
+        let isAdmin = false; // Nouveau drapeau pour le statut administrateur
 
         // Références aux collections Firestore
         let planetsRef;
         let connectionsRef;
+        let userStatusRef; // Nouvelle référence pour le statut utilisateur
+        let adminUsersRef; // Nouvelle référence pour la collection des administrateurs
 
         // --- Variables Three.js ---
         let scene, camera, renderer, virtualBrain;
@@ -1159,7 +1211,14 @@
                         document.getElementById('userIdDisplay').textContent = `ID Utilisateur: ${userId}`;
                         planetsRef = collection(db, `artifacts/${appId}/users/${userId}/planets`);
                         connectionsRef = collection(db, `artifacts/${appId}/users/${userId}/connections`);
+                        userStatusRef = doc(db, `artifacts/${appId}/users/${userId}/userStatus/main`); // Document unique pour le statut utilisateur
+                        adminUsersRef = doc(db, `artifacts/${appId}/adminUsers/${userId}`); // Document pour vérifier si l'utilisateur est admin
                         isAuthReady = true;
+                        
+                        // Charger le statut VIP de l'utilisateur
+                        await loadUserStatus();
+                        // Vérifier le statut administrateur
+                        await checkAdminStatus();
                         loadGalaxyFromFirestore(); // Charger les données une fois authentifié
                     } else {
                         // Se connecter anonymement si aucun utilisateur ou jeton
@@ -1194,6 +1253,8 @@
         const planetTooltip = document.getElementById('planetTooltip');
         const planetCountElement = document.getElementById('planetCount');
         const connectionCountElement = document.getElementById('connectionCount');
+        const vipStatusElement = document.getElementById('vipStatus'); // Élément pour afficher le statut VIP
+        const adminPanelNavItem = document.getElementById('adminPanelNavItem'); // Élément pour le panneau administrateur
 
         // Nouveaux éléments pour le modal de détails de planète
         const planetDetailsModal = document.getElementById('planetDetailsModal');
@@ -1208,6 +1269,14 @@
         const detailPlanetStability = document.getElementById('detailPlanetStability');
         const interactWithPlanetBtn = document.getElementById('interactWithPlanetBtn');
         const deletePlanetBtn = document.getElementById('deletePlanetBtn');
+
+        // Nouveaux éléments pour l'accès VIP
+        const vipAccessBtn = document.getElementById('vipAccessBtn');
+        const vipAccessModal = document.getElementById('vipAccessModal');
+        const closeVipAccessModal = document.getElementById('closeVipAccessModal');
+        const cancelVipAccess = document.getElementById('cancelVipAccess');
+        const confirmVipPayment = document.getElementById('confirmVipPayment');
+        const cryptoWalletAddressInput = document.getElementById('cryptoWalletAddress');
 
         // --- Variables Globales pour les Données de la Galaxie ---
         let planetsData = [];
@@ -1382,6 +1451,9 @@
             renderer.domElement.addEventListener('mousemove', onMouseMove, false);
             renderer.domElement.addEventListener('mouseup', onMouseUp, false);
             renderer.domElement.addEventListener('mouseleave', onMouseUp, false); // Gérer le cas où la souris sort de la fenêtre
+            renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+            renderer.domElement.addEventListener('touchmove', onTouchMove, false);
+            renderer.domElement.addEventListener('touchend', onTouchEnd, false);
         };
 
         // Three.js : Fonctions de gestion de la souris
@@ -1411,6 +1483,33 @@
             isMouseDown = false;
         }
 
+        // Three.js : Fonctions de gestion du toucher (pour mobile)
+        function onTouchStart(event) {
+            if (event.touches.length === 1) {
+                isMouseDown = true;
+                mouseX = event.touches[0].clientX;
+                mouseY = event.touches[0].clientY;
+            }
+        }
+
+        function onTouchMove(event) {
+            if (!isMouseDown || event.touches.length !== 1) return;
+
+            const deltaX = event.touches[0].clientX - mouseX;
+            const deltaY = event.touches[0].clientY - mouseY;
+
+            targetRotationY += deltaX * rotationSpeed;
+            targetRotationX += deltaY * rotationSpeed;
+
+            targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
+
+            mouseX = event.touches[0].clientX;
+            mouseY = event.touches[0].clientY;
+        }
+
+        function onTouchEnd(event) {
+            isMouseDown = false;
+        }
 
         // Three.js : Boucle d'animation pour le Cerveau Virtuel
         const animateVirtualBrain3D = () => {
@@ -1588,6 +1687,9 @@
                 for (const d of connectionDocs.docs) {
                     await deleteDoc(d.ref);
                 }
+                // Réinitialiser le statut VIP
+                await setDoc(userStatusRef, { isVIP: false });
+                // Note: Le statut admin n'est pas réinitialisé ici car il est géré globalement pour l'application.
                 showToast("Toutes les données de la galaxie ont été effacées de Firestore.", "success");
             } catch (e) {
                 console.error("Erreur lors de la suppression de toutes les données : ", e);
@@ -1606,14 +1708,14 @@
             if (!coreExists) {
                 const corePlanet = {
                     id: 'core',
-                    name: 'Noyau NeuraX',
+                    name: 'Noyau N-X-U 2.5s',
                     type: 'core',
                     size: 80,
                     population: '∞',
                     tech: '100%',
                     connections: 0,
                     stability: '99%',
-                    description: "Le cœur du réseau NeuraX, centre de toutes les opérations."
+                    description: "Le cœur du réseau N-X-U 2.5s, centre de toutes les opérations."
                 };
                 await savePlanetToFirestore(corePlanet); // Sauvegarder le noyau dans Firestore
                 // planetsData sera mis à jour via onSnapshot
@@ -1978,8 +2080,120 @@
                         currentSelectedPlanet = null;
                     }
                 } else if (currentSelectedPlanet && currentSelectedPlanet.id === 'core') {
-                    showToast("Le Noyau NeuraX ne peut pas être supprimé !", "error");
+                    showToast("Le Noyau N-X-U 2.5s ne peut pas être supprimé !", "error");
                 }
+            });
+        }
+
+        // --- Logique du Statut VIP ---
+        const loadUserStatus = async () => {
+            if (!isAuthReady || !userId) return;
+            try {
+                const docSnap = await getDoc(userStatusRef);
+                if (docSnap.exists()) {
+                    currentUserIsVIP = docSnap.data().isVIP || false;
+                } else {
+                    // Si le document n'existe pas, le créer avec isVIP à false
+                    await setDoc(userStatusRef, { isVIP: false });
+                    currentUserIsVIP = false;
+                }
+                updateVipDisplay();
+            } catch (e) {
+                console.error("Erreur lors du chargement du statut utilisateur :", e);
+                showToast("Erreur de chargement du statut VIP.", "error");
+            }
+        };
+
+        const updateVipStatus = async (status) => {
+            if (!isAuthReady || !userId) {
+                showToast("Impossible de mettre à jour le statut VIP : utilisateur non authentifié.", "error");
+                return;
+            }
+            try {
+                await setDoc(userStatusRef, { isVIP: status });
+                currentUserIsVIP = status;
+                updateVipDisplay();
+                showToast(`Statut VIP mis à jour : ${status ? 'Activé' : 'Désactivé'}`, "success");
+            } catch (e) {
+                console.error("Erreur lors de la mise à jour du statut VIP :", e);
+                showToast("Erreur lors de la mise à jour du statut VIP.", "error");
+            }
+        };
+
+        const updateVipDisplay = () => {
+            if (vipStatusElement) {
+                vipStatusElement.style.display = currentUserIsVIP ? 'inline-block' : 'none';
+                if (currentUserIsVIP) {
+                    vipAccessBtn.style.display = 'none'; // Cacher le bouton si déjà VIP
+                } else {
+                    vipAccessBtn.style.display = 'flex'; // Afficher le bouton si pas VIP
+                }
+            }
+        };
+
+        // --- Logique du Statut Administrateur ---
+        const checkAdminStatus = async () => {
+            if (!isAuthReady || !userId) return;
+            try {
+                const docSnap = await getDoc(adminUsersRef);
+                isAdmin = docSnap.exists(); // L'utilisateur est admin si le document existe
+                updateAdminDisplay();
+            } catch (e) {
+                // Cette erreur est attendue si les règles de sécurité Firestore ne permettent pas la lecture.
+                // L'utilisateur doit configurer les règles de sécurité dans la console Firebase.
+                console.error("Erreur lors du chargement du statut admin :", e);
+                console.warn("Pour activer la vérification du statut administrateur, assurez-vous que vos règles de sécurité Firestore permettent la lecture de la collection 'adminUsers' pour l'utilisateur authentifié. Exemple de règle: 'match /artifacts/{appId}/adminUsers/{userId} { allow read: if request.auth != null && request.auth.uid == userId; }'");
+                showToast("Erreur de chargement du statut admin. Vérifiez les règles Firestore.", "error");
+            }
+        };
+
+        const updateAdminDisplay = () => {
+            if (adminPanelNavItem) {
+                adminPanelNavItem.style.display = isAdmin ? 'flex' : 'none';
+            }
+        };
+
+        // --- Logique du Modal Accès VIP ---
+        if (vipAccessBtn) {
+            vipAccessBtn.addEventListener('click', () => {
+                if (currentUserIsVIP) {
+                    showToast("Vous êtes déjà un membre VIP !", "info");
+                } else {
+                    showModal(vipAccessModal);
+                }
+            });
+        }
+
+        if (closeVipAccessModal) {
+            closeVipAccessModal.addEventListener('click', () => hideModal(vipAccessModal));
+        }
+
+        if (cancelVipAccess) {
+            cancelVipAccess.addEventListener('click', () => hideModal(vipAccessModal));
+        }
+
+        if (confirmVipPayment) {
+            confirmVipPayment.addEventListener('click', async () => {
+                const walletAddress = cryptoWalletAddressInput.value.trim();
+                if (walletAddress.length < 10) { // Simple validation
+                    showToast("Veuillez entrer une adresse de portefeuille crypto valide.", "error");
+                    return;
+                }
+
+                showToast("Simulation de paiement en cours...", "info");
+                hideModal(vipAccessModal);
+
+                // Simuler un délai de traitement de paiement
+                setTimeout(async () => {
+                    const paymentSuccess = Math.random() > 0.1; // 90% de chance de succès pour la simulation
+
+                    if (paymentSuccess) {
+                        await updateVipStatus(true);
+                        showToast("Paiement VIP réussi ! Accès VIP activé.", "success");
+                    } else {
+                        showToast("Paiement VIP échoué. Veuillez réessayer.", "error");
+                    }
+                }, 2000); // Délai de 2 secondes
             });
         }
 
