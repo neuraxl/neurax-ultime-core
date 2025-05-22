@@ -141,7 +141,6 @@
     function drawGalaxy() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw stars
       stars.forEach(s => {
         s.angle += s.speed;
         const x = canvas.width / 2 + s.radius * Math.cos(s.angle);
@@ -154,7 +153,6 @@
         s.y = y;
       });
 
-      // Draw orbiting ship
       ship.angle += ship.speed;
       const sx = canvas.width / 2 + ship.radius * Math.cos(ship.angle);
       const sy = canvas.height / 2 + ship.radius * Math.sin(ship.angle);
