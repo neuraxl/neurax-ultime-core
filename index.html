@@ -1,16 +1,1888 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Client WebSocket</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-X-U 2.5s | Univers Cosmique Numérique</title>
+    <style>
+        :root {
+            --primary: #0f0c29;
+            --secondary: #302b63;
+            --accent: #24243e;
+            --highlight: #00d2ff;
+            --warning: #ff416c;
+            --dark: #000428;
+            --light: #e6f7ff;
+            --glow: 0 0 15px rgba(0, 210, 255, 0.7);
+            --star: rgba(255, 255, 255, 0.8);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Orbitron', 'Segoe UI', sans-serif;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+        
+        body {
+            background: linear-gradient(to bottom, var(--dark), var(--primary));
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Les étoiles sont toujours là pour un effet de profondeur, mais le canvas 3D est au-dessus */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2; 
+        }
+        
+        .star {
+            position: absolute;
+            background-color: var(--star);
+            border-radius: 50%;
+            animation: twinkle var(--duration, 5s) infinite ease-in-out;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 80px 1fr;
+            grid-template-areas:
+                "header header"
+                "sidebar main";
+            height: 100vh;
+        }
+        
+        header {
+            grid-area: header;
+            background: rgba(15, 12, 41, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 10;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, var(--highlight), #ff416c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--highlight);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: rgba(230, 247, 255, 0.7);
+        }
+        
+        .user-panel {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--highlight), var(--warning));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .avatar:hover {
+            transform: scale(1.1);
+            box-shadow: var(--glow);
+        }
+
+        .vip-status {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            background: linear-gradient(90deg, #ffd700, #ffa500);
+            color: #333;
+            border-radius: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 0.5rem;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+        }
+        
+        .sidebar {
+            grid-area: sidebar;
+            background: rgba(15, 12, 41, 0.85);
+            padding: 2rem 0;
+            border-right: 1px solid rgba(0, 210, 255, 0.2);
+            overflow-y: auto;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        
+        .nav-item {
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            color: rgba(230, 247, 255, 0.7);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(0, 210, 255, 0.1), 
+                transparent);
+            transition: all 0.5s;
+        }
+        
+        .nav-item:hover::before {
+            left: 100%;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: rgba(0, 210, 255, 0.05);
+            color: var(--highlight);
+        }
+        
+        .nav-item.active {
+            border-left: 3px solid var(--highlight);
+        }
+        
+        .nav-item i {
+            font-size: 1.3rem;
+            width: 24px;
+            text-align: center;
+        }
+        
+        .nav-label {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .main-content {
+            grid-area: main;
+            padding: 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        /* Three.js canvas will be appended to body and styled directly in JS */
+        /* The original #universe-canvas is removed and replaced by Three.js's canvas */
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(15, 12, 41, 0.6);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 210, 255, 0.2);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                transparent, 
+                rgba(0, 210, 255, 0.03), 
+                transparent);
+            transform: rotate(45deg);
+            animation: cardGlow 6s infinite linear;
+        }
+        
+        @keyframes cardGlow {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--glow);
+            border-color: var(--highlight);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: var(--highlight);
+        }
+        
+        .card-icon {
+            font-size: 1.3rem;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0, 210, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 210, 255, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .stat-item:hover {
+            background: rgba(0, 210, 255, 0.1);
+            transform: translateY(-3px);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, var(--highlight), #ff416c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: rgba(230, 247, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .progress-container {
+            margin: 1.5rem 0;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: rgba(230, 247, 255, 0.7);
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: rgba(0, 210, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--highlight), #ff416c);
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        @keyframes progressGlow {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .galaxy-view {
+            background: rgba(15, 12, 41, 0.6);
+            border-radius: 15px;
+            padding: 1.5rem;
+            height: 600px;
+            position: relative; /* Important for absolute positioning of canvas */
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 210, 255, 0.2);
+        }
+        
+        .galaxy-container {
+            width: 100%;
+            height: 100%;
+            position: relative; /* Parent for the 3D canvas */
+        }
+        
+        /* Styles for 2D planets and connections are removed as they are now 3D */
+        
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, var(--highlight), transparent);
+            transform-origin: left center;
+            z-index: 1;
+            opacity: 0.3;
+        }
+        
+        .connection.active {
+            opacity: 0.7;
+            background: linear-gradient(90deg, var(--highlight), #ff416c);
+            animation: pulseConnection 1s infinite alternate; /* Rendre l'animation de pulsation plus visible */
+        }
+        
+        @keyframes pulseConnection {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .control-btn {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--light);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            font-weight: 500;
+            text-align: center;
+            min-height: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                transparent, 
+                rgba(0, 210, 255, 0.05), 
+                transparent);
+            transform: rotate(45deg);
+            animation: controlGlow 6s infinite linear;
+        }
+        
+        @keyframes controlGlow {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+        
+        .control-btn:hover {
+            background: rgba(0, 210, 255, 0.2);
+            transform: translateY(-5px);
+            box-shadow: var(--glow);
+            border-color: var(--highlight);
+        }
+        
+        .control-btn i {
+            font-size: 1.8rem;
+            color: var(--highlight);
+        }
+        
+        .control-btn .btn-label {
+            font-size: 0.9rem;
+        }
+        
+        .control-btn.danger {
+            border-color: rgba(255, 65, 108, 0.3);
+        }
+        
+        .control-btn.danger:hover {
+            background: rgba(255, 65, 108, 0.2);
+            box-shadow: 0 0 15px rgba(255, 65, 108, 0.7);
+        }
+        
+        .control-btn.vip-blink {
+            animation: vipBlink 1.5s infinite alternate; /* Appliquer l'animation de clignotement */
+        }
+
+        @keyframes vipBlink {
+            0% { background: linear-gradient(90deg, #00d2ff, #0066ff); box-shadow: 0 0 15px rgba(0, 210, 255, 0.7); }
+            50% { background: linear-gradient(90deg, #ff416c, #ff4b2b); box-shadow: 0 0 15px rgba(255, 65, 108, 0.7); }
+            100% { background: linear-gradient(90deg, #00d2ff, #0066ff); box-shadow: 0 0 15px rgba(0, 210, 255, 0.7); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 4, 40, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 15px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+            border: 1px solid var(--highlight);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.5);
+            animation: modalAppear 0.5s;
+        }
+        
+        @keyframes modalAppear {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            color: var(--light);
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .close-modal:hover {
+            color: var(--highlight);
+            transform: scale(1.1);
+        }
+        
+        .modal-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        
+        .modal-title {
+            font-size: 1.8rem;
+            color: var(--highlight);
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--highlight), #ff416c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .modal-body {
+            margin-bottom: 2rem;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--highlight), #ff416c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 210, 255, 0.6);
+        }
+        
+        .btn-cancel {
+            background: transparent;
+            color: var(--light);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        
+        .btn-cancel:hover {
+            background: rgba(0, 210, 255, 0.1);
+            border-color: var(--highlight);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 500;
+            color: var(--highlight);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 210, 255, 0.05);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 8px;
+            color: var(--light);
+            outline: none;
+            transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .form-input:focus {
+            border-color: var(--highlight);
+            box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.3);
+            background: rgba(0, 210, 255, 0.1);
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 210, 255, 0.1);
+            border-radius: 4px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--highlight);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.7);
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(90deg, var(--highlight), #00b4db);
+            color: white;
+            padding: 1.2rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1000;
+            animation: slideIn 0.3s, fadeOut 0.3s 3s forwards;
+        }
+        
+        .toast.error {
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "header"
+                    "main";
+            }
+            
+            .sidebar {
+                position: fixed;
+                left: -300px;
+                top: 80px;
+                height: calc(100vh - 80px);
+                z-index: 5;
+                transition: left 0.3s;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .menu-toggle {
+                display: block;
+                margin-right: 1rem;
+                font-size: 1.8rem;
+                cursor: pointer;
+                color: var(--light);
+            }
+            
+            .galaxy-view {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-panel {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Nebula effect for universe canvas */
+        .nebula {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.3;
+            z-index: -1;
+        }
+        
+        /* Planet info tooltip */
+        .planet-tooltip {
+            position: absolute;
+            background: rgba(15, 12, 41, 0.95);
+            border: 1px solid var(--highlight);
+            border-radius: 10px;
+            padding: 1rem;
+            width: 250px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        
+        .planet-tooltip.show {
+            opacity: 1;
+        }
+        
+        .planet-name {
+            font-weight: 700;
+            color: var(--highlight);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .planet-desc {
+            font-size: 0.9rem;
+            color: rgba(230, 247, 255, 0.8);
+            margin-bottom: 1rem;
+        }
+        
+        .planet-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .planet-stat .label {
+            color: rgba(230, 247, 255, 0.7);
+        }
+        
+        .planet-stat .value {
+            color: white;
+            font-weight: 500;
+        }
+
+        /* Styles pour le nouveau modal de détails de planète */
+        .planet-details-modal-content {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+            border: 1px solid var(--highlight);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.5);
+            animation: modalAppear 0.5s;
+        }
+
+        .planet-details-modal-content .modal-title {
+            margin-bottom: 1rem;
+        }
+
+        .planet-details-info {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .planet-details-info-item {
+            background: rgba(0, 210, 255, 0.05);
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 210, 255, 0.1);
+        }
+
+        .planet-details-info-item .label {
+            font-size: 0.85rem;
+            color: var(--highlight);
+            margin-bottom: 0.2rem;
+            display: block;
+        }
+
+        .planet-details-info-item .value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--light);
+        }
+
+        .planet-details-description {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: rgba(230, 247, 255, 0.8);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0, 210, 255, 0.1);
+        }
+
+        .planet-details-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-  <h1>Client WebSocket</h1>
-  <input id="messageInput" type="text" placeholder="Entrez un message">
-  <button onclick="sendMessage()">Envoyer</button>
-  <div id="chat"></div>
+    <div class="stars" id="stars"></div>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-atom logo-icon"></i>
+                <h1>N-X-U 2.5s</h1>
+            </div>
+            <div class="user-info">
+                <span id="userIdDisplay">Chargement ID...</span>
+                <span id="vipStatus" class="vip-status" style="display:none;">VIP</span>
+            </div>
+            <div class="user-panel">
+                <button class="control-btn" id="vipAccessBtn" style="width: auto; padding: 0.5rem 1rem; min-height: unset;">
+                    <i class="fas fa-gem"></i>
+                    <span class="btn-label">Accès VIP</span>
+                </button>
+                <div class="avatar">
+                    <i class="fas fa-user-astronaut"></i>
+                </div>
+                <i class="fas fa-bars menu-toggle" id="menuToggle"></i>
+            </div>
+        </header>
+        
+        <aside class="sidebar" id="sidebar">
+            <div class="nav-item active" data-target-content="galaxyViewContent">
+                <i class="fas fa-globe-europe"></i>
+                <span class="nav-label">Cartographie Stellaire</span>
+            </div>
+            <div class="nav-item" data-target-content="civilizationsContent">
+                <i class="fas fa-planet-ringed"></i>
+                <span class="nav-label">Civilisations IA</span>
+            </div>
+            <div class="nav-item" data-target-content="portalsContent">
+                <i class="fas fa-stars"></i>
+                <span class="nav-label">Réseau de Portails</span>
+            </div>
+            <div class="nav-item" data-target-content="gravitationalContent">
+                <i class="fas fa-cogs"></i>
+                <span class="nav-label">Contrôle Gravitationnel</span>
+            </div>
+            <div class="nav-item" data-target-content="worldGeneratorContent">
+                <i class="fas fa-dna"></i>
+                <span class="nav-label">Générateur de Mondes</span>
+            </div>
+            <div class="nav-item" data-target-content="interstellarContent">
+                <i class="fas fa-project-diagram"></i>
+                <span class="nav-label">Connexions Interstellaires</span>
+            </div>
+            <div class="nav-item" data-target-content="cosmicAvatarContent">
+                <i class="fas fa-user-astronaut"></i>
+                <span class="nav-label">Avatar Cosmique</span>
+            </div>
+            <div class="nav-item" data-target-content="quantumShieldsContent">
+                <i class="fas fa-shield-alt"></i>
+                <span class="nav-label">Boucliers Quantiques</span>
+            </div>
+            <div class="nav-item" data-target-content="galacticArchivesContent">
+                <i class="fas fa-info-circle"></i>
+                <span class="nav-label">Archives Galactiques</span>
+            </div>
+            <div class="nav-item" id="adminPanelNavItem" style="display: none;" data-target-content="adminPanelContent">
+                <i class="fas fa-user-shield"></i>
+                <span class="nav-label">Panneau Admin</span>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <div class="control-panel">
+                <button class="control-btn" id="startBtn">
+                    <i class="fas fa-power-off"></i>
+                    <span class="btn-label">Activer Matrice Stellaire</span>
+                </button>
+                <button class="control-btn" id="exploreBtn">
+                    <i class="fas fa-rocket"></i>
+                    <span class="btn-label">Explorer Nouveaux Mondes</span>
+                </button>
+                <button class="control-btn" id="connectBtn">
+                    <i class="fas fa-plug"></i>
+                    <span class="btn-label">Établir Connexions</span>
+                </button>
+                <button class="control-btn" id="commBtn">
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span class="btn-label">Réseau de Communication</span>
+                </button>
+                <button class="control-btn danger" id="resetBtn">
+                    <i class="fas fa-supernova"></i>
+                    <span class="btn-label">Nova de Réinitialisation</span>
+                </button>
+            </div>
+            
+            <div class="dashboard">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-stars card-icon"></i>
+                            <span>Statut de la Matrice</span>
+                        </div>
+                        <i class="fas fa-ellipsis-v"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="planetCount">0</div>
+                                <div class="stat-label">Mondes Connectés</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="connectionCount">0</div>
+                                <div class="stat-label">Routes Spatiales</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="networkLoad">42%</div>
+                                <div class="stat-label">Charge du Réseau</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="quantumStability">87%</div>
+                                <div class="stat-label">Stabilité Quantique</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-planet-ringed card-icon"></i>
+                            <span>Expansion Stellaire</span>
+                        </div>
+                        <i class="fas fa-ellipsis-v"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress-container">
+                            <div class="progress-label">
+                                <span>Progression de l'Expansion</span>
+                                <span id="expansionProgressText">65%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="expansionProgress" style="width: 65%;"></div>
+                            </div>
+                        </div>
+                        <div class="stat-item" style="margin-top: 1.5rem; text-align: center;">
+                            <div class="stat-label">Nouveaux Mondes Découverts</div>
+                            <div class="stat-value" id="newWorldsDiscovered" style="font-size: 1.8rem;">247</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="galaxy-view" id="galaxyViewContent">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-galaxy card-icon"></i>
+                        <span>Cartographie du Réseau N-X-U 2.5s</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="control-btn" style="width: auto; padding: 0.5rem 1rem; min-height: unset;" id="zoomInBtn">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="control-btn" style="width: auto; padding: 0.5rem 1rem; min-height: unset;" id="zoomOutBtn">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <button class="control-btn" style="width: auto; padding: 0.5rem 1rem; min-height: unset;" id="resetViewBtn">
+                            <i class="fas fa-compress-arrows-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="galaxy-container">
+                    </div>
+            </div>
 
-  <script src="client.js"></script>
+            <div id="civilizationsContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-planet-ringed card-icon"></i> Civilisations IA</h2>
+                <p>Informations détaillées sur les civilisations IA détectées et leurs interactions au sein du réseau.</p>
+                </div>
+            <div id="portalsContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-stars card-icon"></i> Réseau de Portails</h2>
+                <p>Gérez et visualisez les portails interstellaires et leurs flux de données.</p>
+                </div>
+            <div id="gravitationalContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-cogs card-icon"></i> Contrôle Gravitationnel</h2>
+                <p>Ajustez les paramètres gravitationnels pour optimiser les routes spatiales et la stabilité des systèmes.</p>
+                </div>
+            <div id="worldGeneratorContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-dna card-icon"></i> Générateur de Mondes</h2>
+                <p>Explorez les possibilités de génération procédurale de nouveaux mondes habitables.</p>
+                </div>
+            <div id="interstellarContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-project-diagram card-icon"></i> Connexions Interstellaires</h2>
+                <p>Visualisez et analysez les schémas de connexion complexes entre les systèmes stellaires.</p>
+                </div>
+            <div id="cosmicAvatarContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-user-astronaut card-icon"></i> Avatar Cosmique</h2>
+                <p>Personnalisez votre avatar et ses capacités d'interaction avec l'univers numérique.</p>
+                </div>
+            <div id="quantumShieldsContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-shield-alt card-icon"></i> Boucliers Quantiques</h2>
+                <p>Configurez et déployez des boucliers quantiques pour protéger vos systèmes.</p>
+                </div>
+            <div id="galacticArchivesContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-info-circle card-icon"></i> Archives Galactiques</h2>
+                <p>Accédez à une vaste base de données d'informations sur l'histoire et les phénomènes de l'univers.</p>
+                </div>
+            <div id="adminPanelContent" class="card main-content-section" style="display: none;">
+                <h2 class="card-title"><i class="fas fa-user-shield card-icon"></i> Panneau Admin</h2>
+                <p>Outils d'administration pour la gestion avancée du système N-X-U 2.5s.</p>
+                </div>
+
+        </main>
+    </div>
+
+    <div id="planetDetailsModal" class="modal">
+        <div class="planet-details-modal-content">
+            <button class="close-modal" id="closePlanetDetailsModal">&times;</button>
+            <div class="modal-header">
+                <h2 class="modal-title" id="planetDetailsName">Nom de la Planète</h2>
+            </div>
+            <div class="modal-body">
+                <p class="planet-details-description" id="planetDetailsDescription">Description de la planète.</p>
+                <div class="planet-details-info">
+                    <div class="planet-details-info-item">
+                        <span class="label">ID Unique:</span>
+                        <span class="value" id="planetDetailsId"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Type Planétaire:</span>
+                        <span class="value" id="planetDetailsType"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Population IA:</span>
+                        <span class="value" id="planetDetailsPopulation"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Ressources Clés:</span>
+                        <span class="value" id="planetDetailsResources"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Stabilité Locale:</span>
+                        <span class="value" id="planetDetailsStability"></span>
+                    </div>
+                    <div class="planet-details-info-item">
+                        <span class="label">Statut Actif:</span>
+                        <span class="value" id="planetDetailsActive"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="interactPlanetBtn">Interagir</button>
+                <button class="btn btn-cancel" id="closePlanetDetailsModalBottom">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="vipAccessModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeVipAccessModal">&times;</button>
+            <div class="modal-header">
+                <h2 class="modal-title">Accès VIP</h2>
+            </div>
+            <div class="modal-body">
+                <p>Entrez votre code d'accès VIP pour débloquer des fonctionnalités exclusives.</p>
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label for="vipCode" class="form-label">Code VIP:</label>
+                    <input type="password" id="vipCode" class="form-input" placeholder="XXXX-XXXX-XXXX">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" id="cancelVipAccess">Annuler</button>
+                <button class="btn btn-primary" id="confirmVipAccess">Activer VIP</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        // Global variables for Three.js
+        let scene, camera, renderer, controls;
+        let planets = [];
+        let connections = [];
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let animationFrameId;
+        let activePlanets = []; // To track active planets for statistics
+
+        // Configuration for the N-X-U 2.5s universe
+        const universeConfig = {
+            planets: {
+                maxCount: 150,
+                baseSize: 5,
+                activeSize: 8,
+                colors: [0x00d2ff, 0xff416c, 0x00ff8c, 0xffea00, 0x8a2be2], // Highlight, Warning, Green, Yellow, Purple
+                speed: 0.05, // Movement speed in 3D space
+                lifespanFactor: 2000, // How long planets "live" (frames)
+                activityThreshold: 0.6 // Energy level for a planet to be "active"
+            },
+            connections: {
+                color: 0x00d2ff, // Highlight color
+                activeColor: 0xff416c, // Warning color
+                width: 0.5,
+                activeWidth: 1.5,
+                opacity: 0.1,
+                activeOpacity: 0.5,
+                pulseSpeed: 0.05 // Speed of connection pulsation
+            },
+            growthRate: 5, // Planets added every few seconds
+            connectionDistance: 70, // Max distance for connections in 3D
+            systemStatus: 'Offline', // Initial system status
+            expansionProgress: 0, // Progress towards next expansion event
+            isMatrixActive: false, // Overall system operational status
+            vipMode: false,
+            adminMode: false
+        };
+
+        // DOM Elements
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const vipStatusSpan = document.getElementById('vipStatus');
+        const vipAccessBtn = document.getElementById('vipAccessBtn');
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const navItems = document.querySelectorAll('.nav-item');
+        const mainContentSections = document.querySelectorAll('.main-content-section');
+
+        const startBtn = document.getElementById('startBtn');
+        const exploreBtn = document.getElementById('exploreBtn');
+        const connectBtn = document.getElementById('connectBtn');
+        const commBtn = document.getElementById('commBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        const planetCountSpan = document.getElementById('planetCount');
+        const connectionCountSpan = document.getElementById('connectionCount');
+        const networkLoadSpan = document.getElementById('networkLoad');
+        const quantumStabilitySpan = document.getElementById('quantumStability');
+        const expansionProgressFill = document.getElementById('expansionProgress');
+        const expansionProgressText = document.getElementById('expansionProgressText');
+        const newWorldsDiscoveredSpan = document.getElementById('newWorldsDiscovered');
+
+        const galaxyContainer = document.querySelector('.galaxy-container');
+        const planetTooltip = document.querySelector('.planet-tooltip');
+        const planetDetailsModal = document.getElementById('planetDetailsModal');
+        const closePlanetDetailsModal = document.getElementById('closePlanetDetailsModal');
+        const closePlanetDetailsModalBottom = document.getElementById('closePlanetDetailsModalBottom');
+        const planetDetailsName = document.getElementById('planetDetailsName');
+        const planetDetailsDescription = document.getElementById('planetDetailsDescription');
+        const planetDetailsId = document.getElementById('planetDetailsId');
+        const planetDetailsType = document.getElementById('planetDetailsType');
+        const planetDetailsPopulation = document.getElementById('planetDetailsPopulation');
+        const planetDetailsResources = document.getElementById('planetDetailsResources');
+        const planetDetailsStability = document.getElementById('planetDetailsStability');
+        const planetDetailsActive = document.getElementById('planetDetailsActive');
+        const interactPlanetBtn = document.getElementById('interactPlanetBtn');
+
+        const vipAccessModal = document.getElementById('vipAccessModal');
+        const closeVipAccessModal = document.getElementById('closeVipAccessModal');
+        const vipCodeInput = document.getElementById('vipCode');
+        const cancelVipAccessBtn = document.getElementById('cancelVipAccess');
+        const confirmVipAccessBtn = document.getElementById('confirmVipAccess');
+        const adminPanelNavItem = document.getElementById('adminPanelNavItem');
+
+        const toastContainer = document.getElementById('toastContainer');
+
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const resetViewBtn = document.getElementById('resetViewBtn');
+
+        // --- Utility Functions ---
+
+        /**
+         * Generates a random UUID.
+         * @returns {string} A UUID string.
+         */
+        function generateUUID() {
+            return crypto.randomUUID();
+        }
+
+        /**
+         * Displays a temporary toast notification.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success', 'error', or 'info'.
+         */
+        function showToast(message, type = 'info') {
+            const toastDiv = document.createElement('div');
+            toastDiv.classList.add('toast', type);
+            toastDiv.innerHTML = `<span>${message}</span>`;
+            toastContainer.appendChild(toastDiv);
+
+            setTimeout(() => {
+                toastDiv.remove();
+            }, 3300); // Animation is 3s, so remove after 3.3s
+        }
+
+        /**
+         * Shows a modal.
+         * @param {HTMLElement} modalElement - The modal DOM element.
+         */
+        function showModal(modalElement) {
+            modalElement.style.display = 'flex';
+        }
+
+        /**
+         * Hides a modal.
+         * @param {HTMLElement} modalElement - The modal DOM element.
+         */
+        function hideModal(modalElement) {
+            modalElement.style.display = 'none';
+        }
+
+        // --- Three.js Setup and Classes ---
+
+        /**
+         * Initializes the Three.js scene, camera, renderer, and controls.
+         */
+        function initThreeJS() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000428); // Dark space background
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, galaxyContainer.clientWidth / galaxyContainer.clientHeight, 0.1, 2000);
+            camera.position.set(0, 0, 200); // Initial camera position
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(galaxyContainer.clientWidth, galaxyContainer.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            galaxyContainer.appendChild(renderer.domElement); // Append canvas to the galaxy-container
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // Smooth camera movement
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 50;
+            controls.maxDistance = 500;
+            controls.maxPolarAngle = Math.PI / 2; // Prevent camera from going below the "ground"
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Brighter directional light
+            directionalLight.position.set(100, 150, 100);
+            scene.add(directionalLight);
+
+            // Add some point lights for a more dynamic look
+            const pointLight1 = new THREE.PointLight(0x00d2ff, 1, 300);
+            pointLight1.position.set(-100, 50, 100);
+            scene.add(pointLight1);
+            const pointLight2 = new THREE.PointLight(0xff416c, 0.7, 300);
+            pointLight2.position.set(100, -50, -100);
+            scene.add(pointLight2);
+
+            // Add nebula effects (simple colored spheres with low opacity)
+            createNebulae(5);
+
+            // Event listeners for mouse interaction on 3D canvas
+            renderer.domElement.addEventListener('mousemove', onCanvasMouseMove, false);
+            renderer.domElement.addEventListener('click', onCanvasClick, false);
+        }
+
+        /**
+         * Creates and adds nebula effects to the scene.
+         * @param {number} count - Number of nebulae to create.
+         */
+        function createNebulae(count) {
+            const nebulaColors = [0x00d2ff, 0xff416c, 0x00ff8c, 0xffea00];
+            for (let i = 0; i < count; i++) {
+                const color = nebulaColors[Math.floor(Math.random() * nebulaColors.length)];
+                const geometry = new THREE.SphereGeometry(Math.random() * 100 + 50, 32, 32);
+                const material = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: Math.random() * 0.1 + 0.05, // Very low opacity
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.BackSide // Render inside the sphere
+                });
+                const nebula = new THREE.Mesh(geometry, material);
+                nebula.position.set(
+                    (Math.random() - 0.5) * 1000,
+                    (Math.random() - 0.5) * 1000,
+                    (Math.random() - 0.5) * 1000
+                );
+                scene.add(nebula);
+            }
+        }
+
+        /**
+         * Handles window resizing to maintain canvas responsiveness.
+         */
+        function onWindowResize() {
+            if (galaxyContainer && renderer && camera) {
+                camera.aspect = galaxyContainer.clientWidth / galaxyContainer.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(galaxyContainer.clientWidth, galaxyContainer.clientHeight);
+            }
+        }
+
+        /**
+         * Represents a single planet (neuron) in the 3D galaxy.
+         * @class
+         */
+        class Planet {
+            constructor(id, x, y, z, type, name, population, resources, stability, description) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.z = z;
+                this.type = type;
+                this.name = name;
+                this.population = population;
+                this.resources = resources;
+                this.stability = stability;
+                this.description = description;
+
+                this.vx = (Math.random() - 0.5) * universeConfig.planets.speed;
+                this.vy = (Math.random() - 0.5) * universeConfig.planets.speed;
+                this.vz = (Math.random() - 0.5) * universeConfig.planets.speed;
+
+                this.size = universeConfig.planets.baseSize + Math.random() * 3; // Slightly varied initial size
+                this.color = new THREE.Color(universeConfig.planets.colors[Math.floor(Math.random() * universeConfig.planets.colors.length)]);
+                
+                this.geometry = new THREE.SphereGeometry(this.size, 16, 16);
+                this.material = new THREE.MeshStandardMaterial({ 
+                    color: this.color, 
+                    emissive: this.color, // For glowing effect
+                    emissiveIntensity: 0.1,
+                    roughness: 0.7,
+                    metalness: 0.2
+                });
+                this.mesh = new THREE.Mesh(this.geometry, this.material);
+                this.mesh.position.set(this.x, this.y, this.z);
+                this.mesh.userData.id = this.id; // Store ID for raycasting
+                this.mesh.userData.isPlanet = true; // Flag for raycasting
+                scene.add(this.mesh);
+
+                this.lifespan = universeConfig.planets.lifespanFactor + Math.random() * universeConfig.planets.lifespanFactor;
+                this.age = 0;
+                this.active = false;
+                this.energy = Math.random(); // Initial energy level
+            }
+
+            /**
+             * Updates the planet's position, size, color, and activity.
+             * @param {number} deltaTime - Time elapsed since last frame.
+             * @returns {boolean} True if the planet should be removed.
+             */
+            update(deltaTime) {
+                if (!universeConfig.isMatrixActive) return false;
+
+                this.x += this.vx * deltaTime;
+                this.y += this.vy * deltaTime;
+                this.z += this.vz * deltaTime;
+
+                // Bounce off boundaries of a cubic region
+                const bounds = 150;
+                if (this.x > bounds || this.x < -bounds) this.vx *= -1;
+                if (this.y > bounds || this.y < -bounds) this.vy *= -1;
+                if (this.z > bounds || this.z < -bounds) this.vz *= -1;
+
+                this.mesh.position.set(this.x, this.y, this.z);
+
+                this.age += deltaTime;
+                if (this.age > this.lifespan) {
+                    return true; // Indicate planet should be removed
+                }
+
+                // Simulate energy/activity
+                this.energy = Math.max(0, Math.min(1, this.energy + (Math.random() - 0.5) * 0.02));
+                this.active = this.energy > universeConfig.planets.activityThreshold;
+
+                // Update size and emissive intensity based on activity
+                const targetSize = this.active ? universeConfig.planets.activeSize : universeConfig.planets.baseSize;
+                this.size += (targetSize - this.size) * 0.1; // Smooth size transition
+                this.mesh.scale.setScalar(this.size / universeConfig.planets.baseSize);
+
+                this.mesh.material.emissiveIntensity = this.active ? (Math.sin(Date.now() * 0.005) * 0.3 + 0.7) : 0.1; // Pulsating glow if active
+
+                return false;
+            }
+
+            /**
+             * Disposes of the planet's Three.js mesh and geometry.
+             */
+            dispose() {
+                scene.remove(this.mesh);
+                this.geometry.dispose();
+                this.material.dispose();
+            }
+        }
+
+        /**
+         * Represents a connection (synapse) between two planets.
+         * @class
+         */
+        class Connection {
+            constructor(planetA, planetB) {
+                this.planetA = planetA;
+                this.planetB = planetB;
+                this.line = null;
+                this.active = false;
+                this.opacity = universeConfig.connections.opacity;
+                this.width = universeConfig.connections.width;
+                this.pulseOffset = Math.random() * Math.PI * 2; // For pulsating effect
+                this.createLine();
+            }
+
+            /**
+             * Creates the Three.js Line object for the connection.
+             */
+            createLine() {
+                const material = new THREE.LineBasicMaterial({
+                    color: universeConfig.connections.color,
+                    linewidth: this.width, // Note: linewidth is not consistently supported across browsers/GPUs
+                    transparent: true,
+                    opacity: this.opacity,
+                    blending: THREE.AdditiveBlending // For glowing effect
+                });
+                const points = [this.planetA.mesh.position, this.planetB.mesh.position];
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                this.line = new THREE.Line(geometry, material);
+                scene.add(this.line);
+            }
+
+            /**
+             * Updates the connection's visual state based on planet activity.
+             */
+            update() {
+                if (!universeConfig.isMatrixActive) return;
+
+                // Update line positions
+                this.line.geometry.attributes.position.needsUpdate = true;
+
+                // Activate connection if both planets are active
+                this.active = this.planetA.active && this.planetB.active;
+
+                let targetOpacity = this.active ? universeConfig.connections.activeOpacity : universeConfig.connections.opacity;
+                let targetColor = this.active ? universeConfig.connections.activeColor : universeConfig.connections.color;
+
+                if (this.active) {
+                    const pulse = Math.sin(Date.now() * universeConfig.connections.pulseSpeed + this.pulseOffset);
+                    targetOpacity = universeConfig.connections.activeOpacity * (0.7 + Math.abs(pulse) * 0.3);
+                }
+
+                this.line.material.opacity += (targetOpacity - this.line.material.opacity) * 0.1;
+                this.line.material.color.lerp(new THREE.Color(targetColor), 0.1);
+            }
+
+            /**
+             * Disposes of the connection's Three.js line.
+             */
+            dispose() {
+                scene.remove(this.line);
+                this.line.geometry.dispose();
+                this.line.material.dispose();
+            }
+        }
+
+        /**
+         * Adds a new planet to the galaxy at a random position or at specified coordinates.
+         * @param {number} [x=null] - X coordinate.
+         * @param {number} [y=null] - Y coordinate.
+         * @param {number} [z=null] - Z coordinate.
+         */
+        function addPlanet(x = null, y = null, z = null) {
+            if (planets.length >= universeConfig.planets.maxCount) {
+                showToast('Capacité maximale de mondes connectés atteinte.', 'error');
+                return;
+            }
+
+            // Generate random coordinates within a sphere if not provided
+            if (x === null || y === null || z === null) {
+                const radius = 100;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(Math.random() * 2 - 1);
+                const r = radius * Math.cbrt(Math.random()); 
+                x = r * Math.sin(phi) * Math.cos(theta);
+                y = r * Math.sin(phi) * Math.sin(theta);
+                z = r * Math.cos(phi);
+            }
+
+            const newPlanet = new Planet(
+                generateUUID(),
+                x, y, z,
+                `Type-${Math.floor(Math.random() * 5) + 1}`,
+                `Monde X-${planets.length + 1}`,
+                Math.floor(Math.random() * 10000000) + 100000,
+                `Ressource-${Math.floor(Math.random() * 3) + 1}`,
+                (Math.random() * 100).toFixed(2) + '%',
+                `Un monde récemment découvert, riche en ${`Ressource-${Math.floor(Math.random() * 3) + 1}`}.`
+            );
+            planets.push(newPlanet);
+            updateDashboardStats();
+            showToast(`Nouveau monde ${newPlanet.name} déployé !`, 'success');
+        }
+
+        /**
+         * Updates connections between planets based on proximity.
+         */
+        function updateConnections() {
+            // Dispose of old connections
+            connections.forEach(conn => conn.dispose());
+            connections = [];
+
+            for (let i = 0; i < planets.length; i++) {
+                for (let j = i + 1; j < planets.length; j++) {
+                    const p1 = planets[i];
+                    const p2 = planets[j];
+                    const distance = p1.mesh.position.distanceTo(p2.mesh.position);
+
+                    if (distance < universeConfig.connectionDistance) {
+                        connections.push(new Connection(p1, p2));
+                    }
+                }
+            }
+            updateDashboardStats();
+        }
+
+        /**
+         * The main animation loop for the Three.js galaxy.
+         */
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+
+            if (universeConfig.isMatrixActive) {
+                // Update planets
+                const planetsToRemove = [];
+                activePlanets = []; // Reset active planets for current frame
+                planets.forEach((planet, index) => {
+                    if (planet.update(1)) { // deltaTime = 1 for consistent updates
+                        planetsToRemove.push(index);
+                    }
+                    if (planet.active) {
+                        activePlanets.push(planet);
+                    }
+                });
+
+                // Remove dying planets
+                for (let i = planetsToRemove.length - 1; i >= 0; i--) {
+                    planets[planetsToRemove[i]].dispose();
+                    planets.splice(planetsToRemove[i], 1);
+                }
+
+                // Update connections
+                updateConnections(); // Recalculate connections every frame (can be optimized for large networks)
+                connections.forEach(connection => connection.update());
+            }
+
+            controls.update(); // Update OrbitControls
+            renderer.render(scene, camera);
+        }
+
+        /**
+         * Updates dashboard statistics based on the current state of the galaxy.
+         */
+        function updateDashboardStats() {
+            planetCountSpan.textContent = planets.length;
+            connectionCountSpan.textContent = connections.length;
+            
+            // Simulate network load and quantum stability
+            const networkLoad = (planets.length / universeConfig.planets.maxCount * 100 * (Math.random() * 0.2 + 0.9)).toFixed(0);
+            networkLoadSpan.textContent = `${Math.min(100, networkLoad)}%`;
+
+            const activePlanetRatio = activePlanets.length / (planets.length || 1);
+            const quantumStability = (80 + activePlanetRatio * 20 - (Math.random() * 5)).toFixed(0); // Higher stability with more active planets
+            quantumStabilitySpan.textContent = `${Math.min(100, Math.max(0, quantumStability))}%`;
+
+            // Update expansion progress
+            universeConfig.expansionProgress = (universeConfig.expansionProgress + universeConfig.growthRate / 100) % 100;
+            expansionProgressFill.style.width = `${universeConfig.expansionProgress}%`;
+            expansionProgressText.textContent = `${universeConfig.expansionProgress.toFixed(0)}%`;
+            newWorldsDiscoveredSpan.textContent = planets.length; // Simply use current planet count for this stat
+        }
+
+        // --- Event Handlers for 3D Canvas Interaction ---
+
+        let hoveredPlanet = null;
+        function onCanvasMouseMove(event) {
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // Update the raycaster with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+
+            // Calculate objects intersecting the ray
+            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh));
+
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                if (intersectedObject.userData.isPlanet) {
+                    const planet = planets.find(p => p.id === intersectedObject.userData.id);
+                    if (planet && hoveredPlanet !== planet) {
+                        // New planet hovered, update tooltip
+                        hoveredPlanet = planet;
+                        planetTooltip.classList.add('show');
+                        planetTooltip.style.left = `${event.clientX + 15}px`;
+                        planetTooltip.style.top = `${event.clientY - planetTooltip.offsetHeight - 15}px`;
+                        
+                        document.querySelector('.planet-tooltip .planet-name').textContent = planet.name;
+                        document.querySelector('.planet-tooltip .planet-desc').textContent = planet.description;
+                        document.querySelector('.planet-tooltip #tooltipId').textContent = planet.id.slice(-6);
+                        document.querySelector('.planet-tooltip #tooltipType').textContent = planet.type;
+                        document.querySelector('.planet-tooltip #tooltipPopulation').textContent = planet.population.toLocaleString();
+                        document.querySelector('.planet-tooltip #tooltipResources').textContent = planet.resources;
+                        document.querySelector('.planet-tooltip #tooltipStability').textContent = planet.stability;
+                        document.querySelector('.planet-tooltip #tooltipActive').textContent = planet.active ? 'Oui' : 'Non';
+                    }
+                }
+            } else {
+                // No planet hovered
+                if (hoveredPlanet) {
+                    planetTooltip.classList.remove('show');
+                    hoveredPlanet = null;
+                }
+            }
+        }
+
+        function onCanvasClick(event) {
+            // Only trigger if a planet is currently hovered
+            if (hoveredPlanet) {
+                displayPlanetDetails(hoveredPlanet);
+            }
+        }
+
+        /**
+         * Displays the detailed modal for a specific planet.
+         * @param {Planet} planet - The planet object to display details for.
+         */
+        function displayPlanetDetails(planet) {
+            planetDetailsName.textContent = planet.name;
+            planetDetailsDescription.textContent = planet.description;
+            planetDetailsId.textContent = planet.id;
+            planetDetailsType.textContent = planet.type;
+            planetDetailsPopulation.textContent = planet.population.toLocaleString();
+            planetDetailsResources.textContent = planet.resources;
+            planetDetailsStability.textContent = planet.stability;
+            planetDetailsActive.textContent = planet.active ? 'Oui' : 'Non';
+
+            // Store the planet ID on the interact button for future use
+            interactPlanetBtn.dataset.planetId = planet.id;
+
+            showModal(planetDetailsModal);
+        }
+
+        // --- Core Application Logic ---
+
+        /**
+         * Activates the Stellar Matrix (starts the simulation).
+         */
+        function activateMatrix() {
+            universeConfig.isMatrixActive = true;
+            universeConfig.systemStatus = 'Operational';
+            startBtn.style.display = 'none';
+            resetBtn.style.display = 'block'; // Show reset button after activation
+            showToast('Matrice Stellaire Activée !', 'success');
+
+            // Initial planet deployment
+            for (let i = 0; i < 20; i++) {
+                addPlanet();
+            }
+        }
+
+        /**
+         * Deactivates the Stellar Matrix (stops the simulation).
+         */
+        function deactivateMatrix() {
+            universeConfig.isMatrixActive = false;
+            universeConfig.systemStatus = 'Offline';
+            startBtn.style.display = 'block';
+            resetBtn.style.display = 'none';
+            showToast('Matrice Stellaire Désactivée.', 'error');
+
+            // Dispose of all planets and connections
+            planets.forEach(p => p.dispose());
+            planets = [];
+            connections.forEach(c => c.dispose());
+            connections = [];
+            updateDashboardStats();
+        }
+
+        /**
+         * Toggles VIP access.
+         */
+        function toggleVipAccess() {
+            if (universeConfig.vipMode) {
+                universeConfig.vipMode = false;
+                vipStatusSpan.style.display = 'none';
+                adminPanelNavItem.style.display = 'none';
+                vipAccessBtn.classList.remove('vip-blink');
+                showToast('Accès VIP désactivé.', 'info');
+            } else {
+                showModal(vipAccessModal);
+            }
+        }
+
+        /**
+         * Handles VIP code confirmation.
+         */
+        function handleVipCodeConfirmation() {
+            const code = vipCodeInput.value;
+            if (code === 'N-X-U-VIP-2025') { // Simple hardcoded VIP code
+                universeConfig.vipMode = true;
+                vipStatusSpan.style.display = 'inline-block';
+                adminPanelNavItem.style.display = 'flex'; // Show admin panel
+                vipAccessBtn.classList.add('vip-blink');
+                showToast('Accès VIP activé ! Bienvenue, Commandant VIP.', 'success');
+                hideModal(vipAccessModal);
+            } else {
+                showToast('Code VIP incorrect.', 'error');
+                vipCodeInput.value = '';
+            }
+        }
+
+        // --- Event Listeners ---
+
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
+        navItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all nav items
+                navItems.forEach(nav => nav.classList.remove('active'));
+                // Add active class to the clicked item
+                this.classList.add('active');
+
+                // Hide all main content sections
+                mainContentSections.forEach(section => section.style.display = 'none');
+                
+                // Show the target content section
+                const targetId = this.dataset.targetContent;
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    targetSection.style.display = 'block';
+                }
+
+                // Special handling for galaxy view to ensure Three.js canvas is visible
+                if (targetId === 'galaxyViewContent') {
+                    if (renderer && renderer.domElement) {
+                        renderer.domElement.style.display = 'block';
+                    }
+                } else {
+                    if (renderer && renderer.domElement) {
+                        renderer.domElement.style.display = 'none';
+                    }
+                }
+
+                // Hide sidebar on mobile after selection
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        });
+
+        startBtn.addEventListener('click', activateMatrix);
+        resetBtn.addEventListener('click', deactivateMatrix); // Reset button now deactivates
+
+        exploreBtn.addEventListener('click', () => {
+            if (universeConfig.isMatrixActive) {
+                addPlanet(); // Add a new planet
+            } else {
+                showToast('La Matrice Stellaire est hors ligne. Activez-la d\'abord.', 'error');
+            }
+        });
+
+        connectBtn.addEventListener('click', () => {
+            if (universeConfig.isMatrixActive) {
+                updateConnections(); // Force connection update
+                showToast('Tentative d\'établissement de nouvelles routes spatiales.', 'info');
+            } else {
+                showToast('La Matrice Stellaire est hors ligne.', 'error');
+            }
+        });
+
+        commBtn.addEventListener('click', () => {
+            showToast('Réseau de communication activé. Transmettez vos messages.', 'info');
+            // Placeholder for actual communication logic
+        });
+
+        vipAccessBtn.addEventListener('click', toggleVipAccess);
+        closeVipAccessModal.addEventListener('click', () => hideModal(vipAccessModal));
+        cancelVipAccessBtn.addEventListener('click', () => hideModal(vipAccessModal));
+        confirmVipAccessBtn.addEventListener('click', handleVipCodeConfirmation);
+
+        closePlanetDetailsModal.addEventListener('click', () => hideModal(planetDetailsModal));
+        closePlanetDetailsModalBottom.addEventListener('click', () => hideModal(planetDetailsModal));
+        interactPlanetBtn.addEventListener('click', (event) => {
+            const planetId = event.target.dataset.planetId;
+            const planet = planets.find(p => p.id === planetId);
+            if (planet) {
+                showToast(`Interaction initiée avec ${planet.name}.`, 'info');
+                hideModal(planetDetailsModal);
+                // Implement more complex interaction logic here
+            }
+        });
+
+        zoomInBtn.addEventListener('click', () => {
+            if (controls) controls.dollyIn(controls.getDistance() * 0.5);
+        });
+        zoomOutBtn.addEventListener('click', () => {
+            if (controls) controls.dollyOut(controls.getDistance() * 0.5);
+        });
+        resetViewBtn.addEventListener('click', () => {
+            if (controls) controls.reset();
+        });
+
+        // --- Initial Setup on Load ---
+        window.onload = function() {
+            // Set initial user ID
+            const currentUserId = generateUUID();
+            userIdDisplay.textContent = `ID: ${currentUserId.slice(0, 8)}...`;
+
+            // Initialize Three.js
+            initThreeJS();
+            animate(); // Start the animation loop
+
+            // Set initial canvas size and handle resize events
+            onWindowResize();
+            window.addEventListener('resize', onWindowResize);
+
+            // Initial dashboard stats update
+            updateDashboardStats();
+
+            // Generate CSS stars (for background depth)
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 200; i++) { // 200 stars for a subtle background
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = `${Math.random() * 2 + 0.5}px`;
+                star.style.height = star.style.width;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.animationDuration = `${Math.random() * 3 + 2}s`; // 2-5s twinkle
+                starsContainer.appendChild(star);
+            }
+        };
+    </script>
 </body>
 </html>
+
