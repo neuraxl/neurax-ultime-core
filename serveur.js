@@ -1,17 +1,19 @@
-const aedes = require('aedes')();
-const net = require('net');
+// server.js
+const WebSocket = require('ws');
 
-const server = net.createServer(aedes.handle);
-const port = 1883;
-
-server.listen(port, function () {
-  console.log('Serveur MQTT Aedes démarré sur le port', port);
+const wss = new WebSocket.Server({ port: 8080 }, () => {
+  console.log('Serveur WebSocket en écoute sur ws://localhost:8080');
 });
 
-aedes.on('client', function (client) {
-  console.log('Client connecté', client.id);
-});
+wss.on('connection', (ws) => {
+  console.log('Client connecté');
 
-aedes.on('publish', function (packet, client) {
-  console.log('Message publié:', packet.payload.toString());
+  ws.on('message', (message) => {
+    console.log(`Message reçu : ${message}`);
+    ws.send(`Echo : ${message}`);
+  });
+
+  ws.on('close', () => {
+    console.log('Client déconnecté');
+  });
 });
