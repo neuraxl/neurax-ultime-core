@@ -25,7 +25,29 @@
         }
         
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
-        
+        <script>
+  const socket = new WebSocket('ws://localhost:8080');
+
+  socket.onopen = () => {
+    console.log('[NeuraX] Connexion neuronale établie 🧠🔗');
+    socket.send(JSON.stringify({ action: 'uplink', data: 'core_init' }));
+  };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    console.log('[NeuraX] Réponse du cerveau :', data);
+
+    if (data.type === 'neural-pulse') {
+      document.body.classList.add('pulse');
+      setTimeout(() => document.body.classList.remove('pulse'), 300);
+    }
+  };
+
+  function envoyerSignalNeuronal(signal) {
+    socket.send(JSON.stringify({ action: 'neural-signal', data: signal }));
+  }
+</script>
+
         body {
             background: linear-gradient(to bottom, var(--dark), var(--primary));
             color: var(--light);
