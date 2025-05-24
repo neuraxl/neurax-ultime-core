@@ -1,3 +1,45 @@
+[
+  {
+    "id": "gaia",
+    "nom": "Gaïa",
+    "fonction": "Matrice racine de la vie et de la mémoire organique",
+    "zone": "Neocortex",
+    "activité": "stable",
+    "liaisons": ["chronos", "nyx"]
+  },
+  {
+    "id": "ouranos",
+    "nom": "Ouranos",
+    "fonction": "Connexion céleste et projection des données",
+    "zone": "Cortex pariétal",
+    "activité": "intense",
+    "liaisons": ["éther", "gaia"]
+  },
+  {
+    "id": "chronos",
+    "nom": "Chronos",
+    "fonction": "Mémoire temporelle et cycles neuronaux",
+    "zone": "Hippocampe",
+    "activité": "cyclique",
+    "liaisons": ["nyx", "gaia"]
+  },
+  {
+    "id": "nyx",
+    "nom": "Nyx",
+    "fonction": "Inconscient, rêve, et domaine des ombres mentales",
+    "zone": "Amygdale",
+    "activité": "fluctuante",
+    "liaisons": ["chronos", "gaia"]
+  },
+  {
+    "id": "ether",
+    "nom": "Éther",
+    "fonction": "Transmission interdimensionnelle des pensées",
+    "zone": "Cortex frontal",
+    "activité": "volatile",
+    "liaisons": ["ouranos"]
+  }
+]
 async function askAI() {
     let userInput = document.getElementById("userInput").value;
     let responseText = "Je réfléchis...";
