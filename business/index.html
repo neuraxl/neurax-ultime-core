@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UNX2 Business AI — Diagnostic intelligent</title>
+<meta name="description" content="UNX2 Business AI transforme un problème d'entreprise en diagnostic, solution IA et plan d'action.">
+<style>
+:root{--bg:#050711;--panel:#0b1020;--line:#24304a;--cyan:#00ffe7;--purple:#8b5cf6;--gold:#fbbf24;--text:#eef2ff;--muted:#94a3b8;--ok:#22c55e}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#18204a 0,transparent 38%),var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:1120px;margin:auto;padding:28px}.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:55px}.brand{font-weight:800;letter-spacing:.08em}.brand b{color:var(--cyan)}.status{font:12px monospace;color:var(--ok)}
+.hero{max-width:780px}.eyebrow{color:var(--cyan);font:12px monospace;letter-spacing:.18em}.hero h1{font-size:clamp(42px,7vw,78px);line-height:.95;margin:16px 0;background:linear-gradient(90deg,#fff,var(--cyan),#c4b5fd);-webkit-background-clip:text;color:transparent}.hero p{font-size:18px;line-height:1.6;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;margin-top:40px}.panel{background:rgba(11,16,32,.82);border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 20px 70px #0008;backdrop-filter:blur(18px)}
+label{display:block;font-size:12px;color:#cbd5e1;margin:15px 0 7px}input,textarea,select{width:100%;padding:13px 14px;background:#070b16;border:1px solid #27334d;border-radius:11px;color:white;outline:none}input:focus,textarea:focus,select:focus{border-color:var(--cyan)}textarea{min-height:120px;resize:vertical}
+button{border:0;border-radius:11px;padding:13px 18px;font-weight:800;cursor:pointer}.primary{background:linear-gradient(90deg,var(--cyan),#67e8f9);color:#031014;width:100%;margin-top:18px}.secondary{background:#141b30;color:#e2e8f0;border:1px solid var(--line)}
+.result{display:none}.result.show{display:block}.score{font-size:42px;font-weight:900;color:var(--cyan)}.tag{display:inline-block;padding:6px 9px;border:1px solid #3b4662;border-radius:999px;font-size:11px;color:#c4b5fd;margin:3px}.result h3{margin-bottom:8px}.result p,.result li{color:#cbd5e1;line-height:1.55}.offer{display:flex;justify-content:space-between;align-items:center;border:1px solid #313d58;border-radius:14px;padding:14px;margin-top:10px}.price{font-weight:900;color:var(--gold)}.small{font-size:12px;color:var(--muted)}.err{color:#fca5a5;margin-top:10px;font-size:13px}@media(max-width:800px){.grid{grid-template-columns:1fr}.wrap{padding:18px}.nav{margin-bottom:35px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="nav"><div class="brand">LÉVIATHAN // <b>UNX2 BUSINESS AI</b></div><div class="status">● RUNTIME READY</div></nav>
+<section class="hero"><div class="eyebrow">PROBLÈME → SOLUTION IA → CLIENT → PAIEMENT → AUTOMATISATION</div><h1>Votre prochain processus automatisé commence ici.</h1><p>Décrivez un problème réel de votre entreprise. Business AI produit un diagnostic exploitable, une solution IA, un plan d'action et une proposition commerciale.</p></section>
+<div class="grid">
+<form class="panel" id="form">
+<h2>Diagnostic gratuit</h2>
+<label>Entreprise</label><input name="company" required placeholder="Ex. Boutique XYZ">
+<label>Secteur</label><input name="sector" required placeholder="Commerce, immobilier, restauration...">
+<label>Ville</label><input name="city" placeholder="Québec">
+<label>Site web</label><input name="website" type="url" placeholder="https://...">
+<label>Nombre approximatif de clients</label><input name="customers" type="number" min="0" placeholder="100">
+<label>Votre principal problème</label><textarea name="problem" required placeholder="Ex. Nous perdons beaucoup de temps à répondre aux mêmes demandes..."></textarea>
+<button class="primary" id="submit">ANALYSER AVEC BUSINESS AI</button>
+<div class="err" id="error"></div>
+</form>
+<section class="panel result" id="result">
+<div class="small">UNX2 DIAGNOSTIC / <span id="time"></span></div>
+<div class="score" id="score">—</div>
+<div id="tags"></div>
+<h3>Problème identifié</h3><p id="identified"></p>
+<h3>Solution IA proposée</h3><p id="solution"></p>
+<h3>Plan d'action</h3><ol id="plan"></ol>
+<h3>Opportunité d'automatisation</h3><p id="automation"></p>
+<div class="offer"><div><b>Starter AI</b><div class="small">Diagnostic + premier flux automatisé</div></div><span class="price">299 CAD</span></div>
+<div class="offer"><div><b>AI Assistant</b><div class="small">Assistant + automatisations évolutives</div></div><span class="price">199 CAD/mois</span></div>
+<button class="primary" id="buy">DÉMARRER LE PROJET</button>
+<p class="small">Le paiement passe par Stripe lorsque STRIPE_SECRET_KEY et un prix Stripe sont configurés. Aucun paiement n'est simulé.</p>
+</section>
+</div>
+</div>
+<script>
+const form=document.querySelector('#form'), result=document.querySelector('#result'), error=document.querySelector('#error');
+function fallback(d){const p=d.problem.toLowerCase();let solution='Assistant IA spécialisé pour qualifier les demandes, produire des réponses et transmettre les cas nécessitant une intervention humaine.';let automation='Formulaire → IA → qualification → notification → suivi automatique.';if(/rendez|booking|horaire|appel/.test(p)){solution='Agent IA de prise de rendez-vous connecté à vos règles commerciales et à un agenda.';automation='Demande → qualification IA → proposition de créneaux → confirmation → rappel.'}else if(/factur|soumission|devis|prix/.test(p)){solution='Copilote IA de préparation des devis et réponses commerciales à partir de vos données approuvées.';automation='Demande → extraction → brouillon IA → validation humaine → envoi → suivi.'}else if(/client|question|courriel|email|message/.test(p)){solution='Agent IA de service client avec base de connaissances et escalade vers un humain.';automation='Message → classification → réponse IA → CRM → relance automatique.'}const score=Math.min(96,68+d.problem.length%25);return{score,identified:'Le problème décrit contient une tâche répétitive pouvant être structurée en flux numérique.',solution,plan:['Cartographier le processus actuel et ses données.','Construire le premier agent/flux IA avec validation humaine.','Mesurer temps économisé, conversion et satisfaction puis automatiser davantage.'],automation,tags:['IA appliquée','Automatisation','Validation humaine']}}
+async function run(e){e.preventDefault();error.textContent='';const data=Object.fromEntries(new FormData(form));document.querySelector('#submit').disabled=true;try{const r=await fetch('/api/business/diagnostic',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)});if(!r.ok)throw new Error('API non configurée');const out=await r.json();render(out,data)}catch(err){render(fallback(data),data);error.textContent='Mode local actif : configurez OPENAI_API_KEY pour activer le diagnostic LLM.'}finally{document.querySelector('#submit').disabled=false}}
+function render(o,d){result.classList.add('show');document.querySelector('#score').textContent=(o.score||0)+'% potentiel';document.querySelector('#identified').textContent=o.identified;document.querySelector('#solution').textContent=o.solution;document.querySelector('#automation').textContent=o.automation;document.querySelector('#plan').innerHTML=(o.plan||[]).map(x=>'<li>'+x+'</li>').join('');document.querySelector('#tags').innerHTML=(o.tags||[]).map(x=>'<span class="tag">'+x+'</span>').join('');document.querySelector('#time').textContent=new Date().toLocaleString('fr-CA');localStorage.setItem('unx2_last_diagnostic',JSON.stringify({data:d,result:o}))}
+form.addEventListener('submit',run);document.querySelector('#buy').onclick=async()=>{try{const r=await fetch('/api/business/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({offer:'starter'})});const x=await r.json();if(x.url)location.href=x.url;else alert(x.message||'Stripe n’est pas encore configuré.')}catch(e){alert('Paiement indisponible : configurez Stripe côté serveur.')}};
+</script>
+</body>
+</html>
