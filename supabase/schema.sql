@@ -1,0 +1,11 @@
+create extension if not exists pgcrypto;
+create table if not exists public.businesses (id uuid primary key default gen_random_uuid(), company text not null, sector text not null, city text, website text, customers integer, created_at timestamptz not null default now());
+create table if not exists public.diagnostics (id uuid primary key default gen_random_uuid(), business_id uuid references public.businesses(id) on delete cascade, problem text not null, score integer, identified text, solution text, plan jsonb, automation text, tags jsonb, status text not null default 'generated', created_at timestamptz not null default now());
+create table if not exists public.leads (id uuid primary key default gen_random_uuid(), business_id uuid references public.businesses(id) on delete cascade, source text not null default 'unx2-business-ai', status text not null default 'new', created_at timestamptz not null default now());
+create table if not exists public.customers (id uuid primary key default gen_random_uuid(), business_id uuid references public.businesses(id) on delete set null, email text, stripe_customer_id text unique, created_at timestamptz not null default now());
+create table if not exists public.payments (id uuid primary key default gen_random_uuid(), customer_id uuid references public.customers(id) on delete set null, stripe_session_id text unique, stripe_payment_intent_id text, amount integer, currency text, status text, created_at timestamptz not null default now());
+create table if not exists public.automation_events (id uuid primary key default gen_random_uuid(), business_id uuid references public.businesses(id) on delete set null, event text not null, payload jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
+create table if not exists public.ai_generations (id uuid primary key default gen_random_uuid(), diagnostic_id uuid references public.diagnostics(id) on delete set null, provider text, model text, prompt_version text, latency_ms integer, created_at timestamptz not null default now());
+create index if not exists idx_diagnostics_business on public.diagnostics(business_id);
+create index if not exists idx_leads_business on public.leads(business_id);
+create index if not exists idx_events_business on public.automation_events(business_id);
