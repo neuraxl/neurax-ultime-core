@@ -1,0 +1,3 @@
+function cfg(){return {url:(process.env.SUPABASE_URL||'').replace(/\/$/,''),key:process.env.SUPABASE_SERVICE_ROLE_KEY||''}}
+export async function supabaseConfigured(){const c=cfg();return !!(c.url&&c.key)}
+export async function supabaseInsert(table,row){const c=cfg();if(!c.url||!c.key)return {configured:false,data:null};const r=await fetch(c.url+'/rest/v1/'+table,{method:'POST',headers:{apikey:c.key,Authorization:'Bearer '+c.key,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(row)});const j=await r.json().catch(()=>null);if(!r.ok)throw new Error(j?.message||j?.hint||'Supabase insert failed');return {configured:true,data:Array.isArray(j)?j[0]:j}}
