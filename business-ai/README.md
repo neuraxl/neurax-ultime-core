@@ -1,19 +1,35 @@
-# UNX2 Business AI v0.1
-Premier module commercial intégré à neurax-ultime-core.
+# UNX2 Business AI v0.2
 
-Flux: Diagnostic -> IA -> Supabase -> Make/n8n -> Stripe.
+Premier module commercial de neurax-ultime-core, maintenant avec Auth, RLS, dashboards, leads, paiements et télémétrie.
 
-Variables Vercel:
-OPENAI_API_KEY
-OPENAI_MODEL (optionnel)
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-STRIPE_SECRET_KEY
-BUSINESS_SUCCESS_URL (optionnel)
-BUSINESS_CANCEL_URL (optionnel)
-MAKE_WEBHOOK_URL (optionnel)
+## Parcours
+Diagnostic -> IA -> Supabase -> lead -> Stripe Checkout -> Stripe webhook -> paiement -> événement Neural Telemetry -> Make/n8n.
 
-URL: /business-ai.html
+## Pages
+- /business-ai.html — diagnostic
+- /business-ai-auth.html — inscription / connexion / lien magique
+- /business-dashboard.html — espace client
+- /business-admin.html — espace admin/manager
 
-Exécuter supabase/business_ai.sql pour activer la persistance.
-Les secrets restent côté serveur. Stripe n'est jamais simulé.
+## Variables Vercel
+- OPENAI_API_KEY
+- OPENAI_MODEL (optionnel)
+- SUPABASE_URL
+- SUPABASE_PUBLISHABLE_KEY (ou SUPABASE_ANON_KEY)
+- SUPABASE_SERVICE_ROLE_KEY
+- STRIPE_SECRET_KEY
+- STRIPE_WEBHOOK_SECRET
+- BUSINESS_SUCCESS_URL (optionnel)
+- BUSINESS_CANCEL_URL (optionnel)
+- MAKE_WEBHOOK_URL (optionnel)
+
+## Supabase
+Exécuter supabase/business_ai.sql dans le SQL Editor. La migration crée profiles, business_diagnostics, leads, payments et business_events, avec RLS et rôles client/manager/admin.
+
+La clé service reste uniquement côté serveur. Le navigateur utilise la clé publishable/anon avec Supabase Auth et RLS.
+
+## Stripe
+Créer un endpoint webhook vers /api/stripe-webhook et configurer STRIPE_WEBHOOK_SECRET. Les événements checkout.session.completed sont enregistrés dans payments et business_events.
+
+## Déploiement
+La branche est prête pour revue via la PR v0.2. Les fournisseurs externes ne sont jamais simulés: sans clés, les fonctions concernées signalent leur configuration manquante.
