@@ -64,6 +64,10 @@ def init():
           started_at TIMESTAMPTZ NOT NULL DEFAULT now(),finished_at TIMESTAMPTZ,
           rows_count INTEGER DEFAULT 0,source_url TEXT,checksum TEXT,
           changed BOOLEAN DEFAULT TRUE,error TEXT)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS data_changes(
+          id BIGSERIAL PRIMARY KEY,dataset TEXT NOT NULL,entity_id TEXT,
+          change_type TEXT NOT NULL,changed_fields JSONB,before JSONB,after JSONB,
+          detected_at TIMESTAMPTZ NOT NULL DEFAULT now(),sync_run_id BIGINT REFERENCES sync_runs(id))""")
 
 @app.on_event("startup")
 def startup():
