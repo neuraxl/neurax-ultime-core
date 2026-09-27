@@ -244,11 +244,22 @@ async def sync():
         t=time.perf_counter(); results={}
         event("health.sync.started",{})
         for name,fn in [("facilities",ingest_facilities),("services",ingest_services),("emergency",ingest_emergency)]:
+            run_id=None
             try:
-                count,url,checksum=await fn(); results[name]={"rows":count,"url":url,"checksum":checksum}
+                with conn() as c:
+                    row=c.execute("INSERT INTO sync_runs(dataset,status) VALUES(%s,'running') RETURNING id",(name,)).fetchone()
+                    run_id=row["id"]
+                count,url,checksum=await fn()
+                with conn() as c:
+                    c.execute("UPDATE sync_runs SET status='completed',finished_at=now(),rows_count=%s,source_url=%s,checksum=%s WHERE id=%s",(count,url,checksum,run_id))
+                results[name]={"rows":count,"url":url,"checksum":checksum,"sync_run_id":run_id}
                 event(f"health.{name}.ingested",results[name])
             except Exception as e:
-                results[name]={"error":str(e)}; event("health.ingest.error",{"dataset":name,"error":str(e)})
+                if run_id:
+                    with conn() as c:
+                        c.execute("UPDATE sync_runs SET status='failed',finished_at=now(),error=%s WHERE id=%s",(str(e),run_id))
+                results[name]={"error":str(e),"sync_run_id":run_id}
+                event("health.ingest.error",{"dataset":name,"error":str(e)})
         results["duration_ms"]=round((time.perf_counter()-t)*1000,2)
         event("health.sync.completed",results)
         return results
