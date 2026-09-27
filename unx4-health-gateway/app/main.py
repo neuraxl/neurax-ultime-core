@@ -57,6 +57,8 @@ def init():
           stretchers DOUBLE PRECISION,patients DOUBLE PRECISION,over_24h DOUBLE PRECISION,
           over_48h DOUBLE PRECISION,present DOUBLE PRECISION,waiting DOUBLE PRECISION,
           source_dataset TEXT,source_url TEXT,raw JSONB,ingested_at TIMESTAMPTZ DEFAULT now())""")
+        c.execute("ALTER TABLE facilities ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE")
+        c.execute("ALTER TABLE services ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE")
         c.execute("CREATE INDEX IF NOT EXISTS facilities_geom_gix ON facilities USING GIST(geom)")
         c.execute("""CREATE TABLE IF NOT EXISTS telemetry(
           id BIGSERIAL PRIMARY KEY,event_type TEXT,source TEXT,payload JSONB,
@@ -227,13 +229,16 @@ async def ingest_services(sync_run_id=None):
         event("health.data.changed",{"dataset":"services","added":sum(x["change_type"]=="added" for x in changes),"updated":sum(x["change_type"]=="updated" for x in changes),"removed":sum(x["change_type"]=="removed" for x in changes),"sync_run_id":sync_run_id})
     return n,r["url"],checksum,True
 
-async def ingest_emergency():
+async def ingest_emergency(sync_run_id=None):
     d,r=await resource_csv(SOURCES["emergency"],"situation à l'urgence")
     if not r:
         d,r=await resource_csv(SOURCES["emergency"])
     if not r: raise RuntimeError("CSV urgences introuvable")
     async with httpx.AsyncClient(timeout=60) as x:
         resp=await x.get(r["url"]); resp.raise_for_status(); raw=resp.content
+    checksum=source_checksum(raw)
+    if source_unchanged("emergency",checksum):
+        return 0,r["url"],checksum,False
     df=pd.read_csv(io.BytesIO(raw),sep=None,engine="python",encoding_errors="replace")
     n=0
     with conn() as c:
@@ -253,14 +258,14 @@ async def ingest_emergency():
               SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s""",
               (vals["facility_name"],vals["data_time"],vals["stretchers"],vals["patients"],vals["over_24h"],vals["over_48h"],vals["present"],vals["waiting"],SOURCES["emergency"],r["url"],json.dumps(row,default=str)))
             n+=1
-    return n,r["url"]
+    return n,r["url"],checksum,True
 
 @app.get("/")
 def root(): return FileResponse("static/index.html")
 
 @app.get("/healthz")
 def healthz():
-    return {"status":"ok","service":"unx4-health-gateway","version":"0.3.0"}
+    return {"status":"ok","service":"unx4-health-gateway","version":"0.6.0"}
 
 @app.get("/readyz")
 def readyz():
@@ -358,11 +363,11 @@ def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lo
     clauses=[]; args=[]
     if region: clauses.append("f.region ILIKE %s"); args.append("%"+region+"%")
     if service:
-        clauses.append("EXISTS (SELECT 1 FROM services s WHERE s.facility_id=f.id AND s.name ILIKE %s)"); args.append("%"+service+"%")
+        clauses.append("EXISTS (SELECT 1 FROM services s WHERE s.facility_id=f.id AND s.active=TRUE AND s.name ILIKE %s)"); args.append("%"+service+"%")
     if lat is not None and lon is not None:
         clauses.append("f.geom IS NOT NULL AND ST_DWithin(f.geom::geography,ST_SetSRID(ST_MakePoint(%s,%s),4326)::geography,%s)")
         args += [lon,lat,radius_km*1000]
-    where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+    where=(" AND "+" AND ".join(clauses)) if clauses else ""
     key=cache_key("facilities",{"region":region,"service":service,"lat":lat,"lon":lon,"radius_km":radius_km,"limit":limit})
     cached=cache_get(key)
     if cached is not None:
