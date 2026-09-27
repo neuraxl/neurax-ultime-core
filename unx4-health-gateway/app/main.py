@@ -145,7 +145,7 @@ async def ingest_facilities():
                lat,lon,lat,lon,lon,lat,SOURCES["facilities"],r["url"],json.dumps(row,default=str)))
             upsert_node("facility:"+ident,"Facility",name,row)
             n+=1
-    return n,r["url"]
+    return n,r["url"],source_checksum(raw)
 
 async def ingest_services():
     d,r=await resource_csv(SOURCES["services"],"2024-04-01")
