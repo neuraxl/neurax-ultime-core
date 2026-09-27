@@ -1,0 +1,18 @@
+name: UNX4 Health Gateway CI
+on:
+  push:
+    paths: ["unx4-health-gateway/**"]
+  pull_request:
+    paths: ["unx4-health-gateway/**"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r unx4-health-gateway/requirements.txt
+      - run: python -m compileall -q unx4-health-gateway/app
+      - run: pytest -q unx4-health-gateway/tests
