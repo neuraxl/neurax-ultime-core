@@ -53,12 +53,15 @@ def init():
           stretchers DOUBLE PRECISION,patients DOUBLE PRECISION,over_24h DOUBLE PRECISION,
           over_48h DOUBLE PRECISION,present DOUBLE PRECISION,waiting DOUBLE PRECISION,
           source_dataset TEXT,source_url TEXT,raw JSONB,ingested_at TIMESTAMPTZ DEFAULT now())""")
+        c.execute("CREATE INDEX IF NOT EXISTS facilities_geom_gix ON facilities USING GIST(geom)")
         c.execute("""CREATE TABLE IF NOT EXISTS telemetry(
           id BIGSERIAL PRIMARY KEY,event_type TEXT,source TEXT,payload JSONB,
           created_at TIMESTAMPTZ DEFAULT now())""")
 
 @app.on_event("startup")
-def startup(): init()
+def startup():
+    init()
+    init_graph()
 
 async def package_show(dataset_id):
     async with httpx.AsyncClient(timeout=30) as x:
@@ -118,7 +121,8 @@ async def ingest_facilities():
 async def ingest_services():
     d,r=await resource_csv(SOURCES["services"],"2024-04-01")
     if not r: raise RuntimeError("CSV capacités/services introuvable")
-    async with httpx.AsyncClient(timeout=90) as x: raw=(await x.get(r["url"])).content
+    async with httpx.AsyncClient(timeout=90) as x:
+        resp=await x.get(r["url"]); resp.raise_for_status(); raw=resp.content
     df=pd.read_csv(io.BytesIO(raw),sep=None,engine="python",encoding_errors="replace")
     n=0
     with conn() as c:
@@ -144,7 +148,8 @@ async def ingest_emergency():
     if not r:
         d,r=await resource_csv(SOURCES["emergency"])
     if not r: raise RuntimeError("CSV urgences introuvable")
-    async with httpx.AsyncClient(timeout=60) as x: raw=(await x.get(r["url"])).content
+    async with httpx.AsyncClient(timeout=60) as x:
+        resp=await x.get(r["url"]); resp.raise_for_status(); raw=resp.content
     df=pd.read_csv(io.BytesIO(raw),sep=None,engine="python",encoding_errors="replace")
     n=0
     with conn() as c:
