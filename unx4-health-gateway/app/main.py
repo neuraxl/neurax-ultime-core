@@ -240,7 +240,7 @@ async def sync():
         event("health.sync.started",{})
         for name,fn in [("facilities",ingest_facilities),("services",ingest_services),("emergency",ingest_emergency)]:
             try:
-                count,url=await fn(); results[name]={"rows":count,"url":url}
+                count,url,checksum=await fn(); results[name]={"rows":count,"url":url,"checksum":checksum}
                 event(f"health.{name}.ingested",results[name])
             except Exception as e:
                 results[name]={"error":str(e)}; event("health.ingest.error",{"dataset":name,"error":str(e)})
