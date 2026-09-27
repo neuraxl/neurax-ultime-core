@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from .graph import init_graph, upsert_node, link, graph_snapshot
 from .change_engine import diff_records
+from .agent_router import route_health_query
 
 DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
 REDIS=os.getenv("REDIS_URL","redis://localhost:6379/0")
@@ -271,6 +272,10 @@ async def sync():
         return results
     finally:
         sync_lock.release()
+
+@app.get("/api/health/route")
+def route(intent:str):
+    return route_health_query(intent)
 
 @app.get("/api/health/changes")
 def changes(dataset:str|None=None,limit:int=100):
