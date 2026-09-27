@@ -298,6 +298,17 @@ def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lo
           GROUP BY f.id ORDER BY f.name LIMIT %s""",args+[limit]).fetchall()
     return {"count":len(rows),"items":rows}
 
+@app.get("/api/health/facilities.geojson")
+def facilities_geojson(region:str|None=None,service:str|None=None,lat:float|None=None,lon:float|None=None,radius_km:float=25,limit:int=1000):
+    data=facilities(region,service,lat,lon,radius_km,limit)
+    features=[]
+    for item in data["items"]:
+        if item.get("longitude") is None or item.get("latitude") is None:
+            continue
+        props={k:v for k,v in item.items() if k not in ("longitude","latitude")}
+        features.append({"type":"Feature","geometry":{"type":"Point","coordinates":[item["longitude"],item["latitude"]]},"properties":props})
+    return {"type":"FeatureCollection","features":features}
+
 @app.get("/api/health/facilities/{facility_id}")
 def facility(facility_id:str):
     with conn() as c:
