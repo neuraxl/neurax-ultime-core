@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UNX4 // HEALTH GATEWAY v0.3</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+body{margin:0;background:#061018;color:#e7fbff;font-family:Inter,Arial,sans-serif}header{padding:18px 22px;border-bottom:1px solid #173845}h1{margin:0;font-size:22px;letter-spacing:2px}.sub{color:#72aab5;font-size:12px}main{display:grid;grid-template-columns:360px 1fr;min-height:calc(100vh - 75px)}aside{padding:16px;border-right:1px solid #173845;overflow:auto}.card{background:#0b1821;border:1px solid #174452;border-radius:12px;padding:13px;margin-bottom:12px}input,button{box-sizing:border-box;width:100%;margin:5px 0;padding:10px;border-radius:8px;border:1px solid #245868;background:#09141c;color:#e7fbff}button{cursor:pointer;background:#0d2932}#map{height:calc(100vh - 75px)}pre{font-size:11px;white-space:pre-wrap;max-height:250px;overflow:auto}.pill{display:inline-block;margin:3px;padding:4px 7px;border-radius:10px;background:#10313a;font-size:11px}@media(max-width:850px){main{grid-template-columns:1fr}aside{border-right:0}#map{height:55vh}}
+</style></head>
+<body><header><h1>UNX4 // HEALTH GATEWAY v0.3</h1><div class="sub">MSSS • Données Québec • PostGIS • Redis • Knowledge Graph • Neural Telemetry</div></header>
+<main><aside>
+<div class="card"><b>État du système</b><pre id="status">chargement…</pre><button onclick="sync()">Synchroniser les sources</button></div>
+<div class="card"><b>Recherche territoriale</b>
+<input id="region" placeholder="Région, ex. Capitale-Nationale">
+<input id="service" placeholder="Service">
+<input id="lat" type="number" step="any" placeholder="Latitude">
+<input id="lon" type="number" step="any" placeholder="Longitude">
+<input id="radius" type="number" value="25" placeholder="Rayon km">
+<button onclick="search()">Rechercher</button></div>
+<div class="card"><b>Résultats</b><div id="results"></div></div>
+<div class="card"><b>Provenance</b><pre id="prov"></pre></div>
+<div class="card"><b>Neural Telemetry</b><pre id="telemetry"></pre></div>
+</aside><section id="map"></section></main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map').setView([52.1,-72.7],5);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);let layer=L.layerGroup().addTo(map);
+async function api(path,opt){return fetch(path,opt).then(r=>{if(!r.ok)throw Error(`${r.status} ${r.statusText}`);return r.json()})}
+async function load(){const [s,p,t,g,sv]=await Promise.all([api('/api/health/status'),api('/api/health/provenance'),api('/api/health/telemetry?limit=8'),api('/api/health/graph?limit=50'),api('/api/health/services?limit=20')]);document.getElementById('status').textContent=JSON.stringify(s,null,2);document.getElementById('prov').textContent=JSON.stringify(p,null,2);document.getElementById('telemetry').textContent=JSON.stringify({events:t.items,graph:g,services:sv.items},null,2);await search()}
+async function search(){const q=new URLSearchParams();for(const id of ['region','service','lat','lon','radius']){const v=document.getElementById(id).value;if(v)q.set(id==='radius'?'radius_km':id,v)}try{const d=await api('/api/health/facilities?'+q);layer.clearLayers();document.getElementById('results').innerHTML=d.items.map(f=>'<div class="card"><b>'+f.name+'</b><br><span class="pill">'+(f.region||'')+'</span><span class="pill">services: '+f.services.length+'</span><br><small>Urgence: '+(f.emergency?.patients??'n/d')+' patients sur civière</small></div>').join('');d.items.forEach(f=>{if(f.latitude&&f.longitude){L.marker([f.latitude,f.longitude]).bindPopup('<b>'+f.name+'</b><br>'+ (f.region||'')+'<br>Patients: '+(f.emergency?.patients??'n/d')).addTo(layer)}})}catch(e){document.getElementById('results').textContent=e.message}}
+async function sync(){document.getElementById('status').textContent='Synchronisation en cours…';try{await api('/api/health/sync',{method:'POST'});await load()}catch(e){document.getElementById('status').textContent=e.message}}
+let ws; try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws/health');}catch(e){document.getElementById('telemetry').textContent='WebSocket indisponible: '+e.message}ws.onmessage=e=>{try{const x=JSON.parse(e.data);document.getElementById('telemetry').textContent=JSON.stringify(x,null,2)}catch{}};load();
+</script></body></html>
