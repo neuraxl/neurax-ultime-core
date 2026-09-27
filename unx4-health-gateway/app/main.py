@@ -1,4 +1,4 @@
-import io, json, math, os, re, time, threading
+import io, json, math, os, re, time, threading, hashlib
 from datetime import datetime, timezone
 from typing import Any
 import httpx, pandas as pd
@@ -14,7 +14,7 @@ DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
 REDIS=os.getenv("REDIS_URL","redis://localhost:6379/0")
 CKAN=os.getenv("CKAN_BASE_URL","https://www.donneesquebec.ca/recherche/api/3/action")
 redis=Redis.from_url(REDIS,decode_responses=True)
-app=FastAPI(title="UNX4 Health Gateway",version="0.3.0",description="Public Québec health data gateway for UNX4.")
+app=FastAPI(title="UNX4 Health Gateway",version="0.4.0",description="Public Québec health data gateway for UNX4.")
 sync_lock=threading.Lock()
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
 
