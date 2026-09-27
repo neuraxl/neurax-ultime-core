@@ -12,7 +12,20 @@ services:
       REDIS_URL: redis://redis:6379/0
       CKAN_BASE_URL: https://www.donneesquebec.ca/recherche/api/3/action
     depends_on:
+      sync:
+    build: .
+    command: ["python","-m","app.scheduler"]
+    environment:
+      DATABASE_URL: postgresql://unx4:unx4@postgres:5432/unx4
+      REDIS_URL: redis://redis:6379/0
+      CKAN_BASE_URL: https://www.donneesquebec.ca/recherche/api/3/action
+      UNX4_SYNC_INTERVAL_SECONDS: 21600
+    depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
