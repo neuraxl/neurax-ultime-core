@@ -10,13 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from .graph import init_graph, upsert_node, link, graph_snapshot
 from .change_engine import diff_records
+from .data_intelligence import persist_changes, apply_soft_removals
 from .agent_router import route_health_query
 
 DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
 REDIS=os.getenv("REDIS_URL","redis://localhost:6379/0")
 CKAN=os.getenv("CKAN_BASE_URL","https://www.donneesquebec.ca/recherche/api/3/action")
 redis=Redis.from_url(REDIS,decode_responses=True)
-app=FastAPI(title="UNX4 Health Gateway",version="0.4.0",description="Public Québec health data gateway for UNX4.")
+app=FastAPI(title="UNX4 Health Gateway",version="0.6.0",description="Public Québec health data gateway for UNX4.")
 sync_lock=threading.Lock()
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
 
@@ -46,10 +47,10 @@ def init():
           id TEXT PRIMARY KEY,name TEXT,kind TEXT,region TEXT,territory TEXT,
           latitude DOUBLE PRECISION,longitude DOUBLE PRECISION,
           geom geometry(Point,4326),source_dataset TEXT,source_url TEXT,
-          source_updated_at TEXT,raw JSONB)""")
+          source_updated_at TEXT,raw JSONB,active BOOLEAN NOT NULL DEFAULT TRUE)""")
         c.execute("""CREATE TABLE IF NOT EXISTS services(
           id BIGSERIAL PRIMARY KEY,facility_id TEXT,name TEXT,category TEXT,
-          capacity TEXT,source_dataset TEXT,source_url TEXT,raw JSONB,
+          capacity TEXT,source_dataset TEXT,source_url TEXT,raw JSONB,active BOOLEAN NOT NULL DEFAULT TRUE,
           UNIQUE(facility_id,name,category))""")
         c.execute("""CREATE TABLE IF NOT EXISTS emergency_status(
           id BIGSERIAL PRIMARY KEY,facility_name TEXT,facility_id TEXT,data_time TEXT,
@@ -109,6 +110,16 @@ def num(v):
 def source_checksum(raw):
     return hashlib.sha256(raw).hexdigest()
 
+
+def latest_checksum(dataset):
+    with conn() as c:
+        row=c.execute("""SELECT checksum FROM sync_runs
+          WHERE dataset=%s AND status='completed' ORDER BY finished_at DESC LIMIT 1""",(dataset,)).fetchone()
+    return row["checksum"] if row else None
+
+def source_unchanged(dataset, checksum):
+    return bool(checksum and checksum == latest_checksum(dataset))
+
 def cache_key(prefix, params):
     raw=json.dumps(params, sort_keys=True, default=str)
     return "unx4:health:"+prefix+":"+hashlib.sha256(raw.encode()).hexdigest()
@@ -134,11 +145,20 @@ def invalidate_cache():
     except Exception:
         pass
 
-async def ingest_facilities():
+async def ingest_facilities(sync_run_id=None):
     d,r=await resource_csv(SOURCES["facilities"],"installations")
     if not r: raise RuntimeError("CSV installations introuvable")
-    raw=(await httpx.AsyncClient(timeout=60).get(r["url"])).content
+    async with httpx.AsyncClient(timeout=60) as x:
+        resp=await x.get(r["url"]); resp.raise_for_status(); raw=resp.content
+    checksum=source_checksum(raw)
+    if source_unchanged("facilities",checksum):
+        return 0,r["url"],checksum,False
     df=pd.read_csv(io.BytesIO(raw),sep=None,engine="python",encoding_errors="replace")
+    before={}
+    with conn() as c:
+        for row in c.execute("SELECT id,name,kind,region,territory,latitude,longitude FROM facilities WHERE active=TRUE").fetchall():
+            before[str(row["id"])]=dict(row)
+    after={}
     n=0
     with conn() as c:
         for _,rr in df.iterrows():
@@ -147,23 +167,38 @@ async def ingest_facilities():
             name=str(pick(row,"Nom_Installation","Nom Installation","Installation") or ident)
             lat=num(pick(row,"Latitude","Lat","LATITUDE")); lon=num(pick(row,"Longitude","Lon","LONGITUDE"))
             if not ident or ident=="nan": continue
-            c.execute("""INSERT INTO facilities(id,name,kind,region,territory,latitude,longitude,geom,source_dataset,source_url,raw)
-              VALUES(%s,%s,'installation',%s,%s,%s,%s,CASE WHEN %s IS NOT NULL AND %s IS NOT NULL THEN ST_SetSRID(ST_MakePoint(%s,%s),4326) END,%s,%s,%s)
+            region=str(pick(row,"RSS_Installation","RSS Installation","Région sociosanitaire") or "")
+            territory=str(pick(row,"RTS_Installation","RTS Installation","Territoire") or "")
+            after[ident]={"id":ident,"name":name,"kind":"installation","region":region,"territory":territory,"latitude":lat,"longitude":lon}
+            c.execute("""INSERT INTO facilities(id,name,kind,region,territory,latitude,longitude,geom,source_dataset,source_url,raw,active)
+              VALUES(%s,%s,'installation',%s,%s,%s,%s,CASE WHEN %s IS NOT NULL AND %s IS NOT NULL THEN ST_SetSRID(ST_MakePoint(%s,%s),4326) END,%s,%s,%s,TRUE)
               ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,region=EXCLUDED.region,territory=EXCLUDED.territory,
-              latitude=EXCLUDED.latitude,longitude=EXCLUDED.longitude,geom=EXCLUDED.geom,raw=EXCLUDED.raw""",
-              (ident,name,str(pick(row,"RSS_Installation","RSS Installation","Région sociosanitaire")),
-               str(pick(row,"RTS_Installation","RTS Installation","Territoire")),
-               lat,lon,lat,lon,lon,lat,SOURCES["facilities"],r["url"],json.dumps(row,default=str)))
+              latitude=EXCLUDED.latitude,longitude=EXCLUDED.longitude,geom=EXCLUDED.geom,raw=EXCLUDED.raw,active=TRUE""",
+              (ident,name,region,territory,lat,lon,lat,lon,lon,lat,SOURCES["facilities"],r["url"],json.dumps(row,default=str)))
             upsert_node("facility:"+ident,"Facility",name,row)
             n+=1
-    return n,r["url"],source_checksum(raw)
+        changes=persist_changes(c,"facilities",before,after,sync_run_id) if sync_run_id else []
+        removed=apply_soft_removals(c,"facilities","id",set(before),set(after))
+    if changes or removed:
+        event("health.data.changed",{"dataset":"facilities","added":sum(x["change_type"]=="added" for x in changes),"updated":sum(x["change_type"]=="updated" for x in changes),"removed":len(removed),"sync_run_id":sync_run_id})
+    return n,r["url"],checksum,True
 
-async def ingest_services():
+async def ingest_services(sync_run_id=None):
     d,r=await resource_csv(SOURCES["services"],"2024-04-01")
     if not r: raise RuntimeError("CSV capacités/services introuvable")
     async with httpx.AsyncClient(timeout=90) as x:
         resp=await x.get(r["url"]); resp.raise_for_status(); raw=resp.content
+    checksum=source_checksum(raw)
+    if source_unchanged("services",checksum):
+        return 0,r["url"],checksum,False
     df=pd.read_csv(io.BytesIO(raw),sep=None,engine="python",encoding_errors="replace")
+    before={}
+    with conn() as c:
+        for row in c.execute("SELECT facility_id,name,category,capacity FROM services WHERE active=TRUE").fetchall():
+            item=dict(row)
+            key=str(item["facility_id"])+"|"+str(item["name"])+"|"+str(item["category"])
+            before[key]=item
+    after={}
     n=0
     with conn() as c:
         for _,rr in df.iterrows():
@@ -172,16 +207,25 @@ async def ingest_services():
             svc=str(pick(row,"Nom_Service","Nom Service","Service","Description_Service","Mission") or "").strip()
             if not fid or not svc or fid=="nan": continue
             cap=pick(row,"Capacité","Capacite","Nombre","Valeur")
-            cat=pick(row,"Catégorie","Categorie","Mission","Type_Service")
-            c.execute("""INSERT INTO services(facility_id,name,category,capacity,source_dataset,source_url,raw)
-              VALUES(%s,%s,%s,%s,%s,%s,%s)
-              ON CONFLICT(facility_id,name,category) DO UPDATE SET capacity=EXCLUDED.capacity,raw=EXCLUDED.raw""",
-              (fid,svc,str(cat or ""),str(cap or ""),SOURCES["services"],r["url"],json.dumps(row,default=str)))
+            cat=str(pick(row,"Catégorie","Categorie","Mission","Type_Service") or "")
+            key=fid+"|"+svc+"|"+cat
+            after[key]={"facility_id":fid,"name":svc,"category":cat,"capacity":str(cap or "")}
+            c.execute("""INSERT INTO services(facility_id,name,category,capacity,source_dataset,source_url,raw,active)
+              VALUES(%s,%s,%s,%s,%s,%s,%s,TRUE)
+              ON CONFLICT(facility_id,name,category) DO UPDATE SET capacity=EXCLUDED.capacity,raw=EXCLUDED.raw,active=TRUE""",
+              (fid,svc,cat,str(cap or ""),SOURCES["services"],r["url"],json.dumps(row,default=str)))
             upsert_node("facility:"+fid,"Facility",fid,{})
             upsert_node("service:"+fid+":"+svc,"Service",svc,{"category":cat,"capacity":cap})
             link("facility:"+fid,"service:"+fid+":"+svc,"OFFERS")
             n+=1
-    return n,r["url"]
+        changes=persist_changes(c,"services",before,after,sync_run_id) if sync_run_id else []
+        removed_keys=set(before)-set(after)
+        for key in removed_keys:
+            fid,name,cat=key.split("|",2)
+            c.execute("UPDATE services SET active=FALSE WHERE facility_id=%s AND name=%s AND category=%s",(fid,name,cat))
+    if changes:
+        event("health.data.changed",{"dataset":"services","added":sum(x["change_type"]=="added" for x in changes),"updated":sum(x["change_type"]=="updated" for x in changes),"removed":sum(x["change_type"]=="removed" for x in changes),"sync_run_id":sync_run_id})
+    return n,r["url"],checksum,True
 
 async def ingest_emergency():
     d,r=await resource_csv(SOURCES["emergency"],"situation à l'urgence")
@@ -255,10 +299,10 @@ async def sync():
                 with conn() as c:
                     row=c.execute("INSERT INTO sync_runs(dataset,status) VALUES(%s,'running') RETURNING id",(name,)).fetchone()
                     run_id=row["id"]
-                count,url,checksum=await fn()
+                count,url,checksum,changed=await fn(run_id)
                 with conn() as c:
-                    c.execute("UPDATE sync_runs SET status='completed',finished_at=now(),rows_count=%s,source_url=%s,checksum=%s WHERE id=%s",(count,url,checksum,run_id))
-                results[name]={"rows":count,"url":url,"checksum":checksum,"sync_run_id":run_id}
+                    c.execute("UPDATE sync_runs SET status='completed',finished_at=now(),rows_count=%s,source_url=%s,checksum=%s,changed=%s WHERE id=%s",(count,url,checksum,changed,run_id))
+                results[name]={"rows":count,"url":url,"checksum":checksum,"changed":changed,"sync_run_id":run_id}
                 event(f"health.{name}.ingested",results[name])
             except Exception as e:
                 if run_id:
@@ -286,6 +330,17 @@ def changes(dataset:str|None=None,limit:int=100):
           WHERE (%s IS NULL OR dataset=%s)
           ORDER BY detected_at DESC LIMIT %s""",(dataset,dataset,limit)).fetchall()
     return {"count":len(rows),"items":rows}
+
+@app.get("/api/health/changes/summary")
+def changes_summary(dataset:str|None=None,hours:int=24):
+    hours=max(1,min(hours,24*365))
+    with conn() as c:
+        rows=c.execute("""SELECT dataset,change_type,count(*) AS count
+          FROM data_changes
+          WHERE detected_at >= now() - (%s * interval '1 hour')
+          AND (%s IS NULL OR dataset=%s)
+          GROUP BY dataset,change_type ORDER BY dataset,change_type""",(hours,dataset,dataset)).fetchall()
+    return {"hours":hours,"items":rows}
 
 @app.get("/api/health/sync/runs")
 def sync_runs(limit:int=20):
@@ -319,7 +374,7 @@ def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lo
             FILTER(WHERE s.id IS NOT NULL),'[]') services,
           (SELECT jsonb_build_object('data_time',e.data_time,'patients',e.patients,'over_24h',e.over_24h,'over_48h',e.over_48h,'present',e.present)
            FROM emergency_status e WHERE e.facility_name ILIKE f.name ORDER BY e.ingested_at DESC LIMIT 1) emergency
-          FROM facilities f LEFT JOIN services s ON s.facility_id=f.id {where}
+          FROM facilities f LEFT JOIN services s ON s.facility_id=f.id AND s.active=TRUE WHERE f.active=TRUE {where}
           GROUP BY f.id ORDER BY f.name LIMIT %s""",args+[limit]).fetchall()
     payload={"count":len(rows),"items":rows}
     cache_set(key,payload)
@@ -339,21 +394,21 @@ def facilities_geojson(region:str|None=None,service:str|None=None,lat:float|None
 @app.get("/api/health/facilities/{facility_id}")
 def facility(facility_id:str):
     with conn() as c:
-        f=c.execute("SELECT * FROM facilities WHERE id=%s",(facility_id,)).fetchone()
+        f=c.execute("SELECT * FROM facilities WHERE id=%s AND active=TRUE",(facility_id,)).fetchone()
         if not f: raise HTTPException(404,"Installation inconnue")
-        sv=c.execute("SELECT id,name,category,capacity,source_url FROM services WHERE facility_id=%s",(facility_id,)).fetchall()
+        sv=c.execute("SELECT id,name,category,capacity,source_url FROM services WHERE facility_id=%s AND active=TRUE",(facility_id,)).fetchall()
         er=c.execute("SELECT * FROM emergency_status WHERE facility_name ILIKE %s ORDER BY ingested_at DESC LIMIT 1",(f["name"],)).fetchone()
     return {"facility":f,"services":sv,"emergency":er,"provenance":{"dataset":f["source_dataset"],"url":f["source_url"]}}
 
 @app.get("/api/health/services")
 def services(q:str|None=None,limit:int=100):
     with conn() as c:
-        rows=c.execute("SELECT name,category,count(*) AS facilities FROM services WHERE (%s IS NULL OR name ILIKE %s) GROUP BY name,category ORDER BY facilities DESC LIMIT %s",(q,"%"+q+"%" if q else None,limit)).fetchall()
+        rows=c.execute("SELECT name,category,count(*) AS facilities FROM services WHERE active=TRUE AND (%s IS NULL OR name ILIKE %s) GROUP BY name,category ORDER BY facilities DESC LIMIT %s",(q,"%"+q+"%" if q else None,limit)).fetchall()
     return {"count":len(rows),"items":rows}
 
 @app.get("/api/health/regions")
 def regions():
-    with conn() as c: rows=c.execute("SELECT region,count(*) facilities FROM facilities GROUP BY region ORDER BY region").fetchall()
+    with conn() as c: rows=c.execute("SELECT region,count(*) facilities FROM facilities WHERE active=TRUE GROUP BY region ORDER BY region").fetchall()
     return {"items":rows}
 
 @app.get("/api/health/graph")
@@ -364,6 +419,30 @@ def graph(limit:int=500):
 def telemetry(limit:int=100):
     with conn() as c: rows=c.execute("SELECT * FROM telemetry ORDER BY id DESC LIMIT %s",(limit,)).fetchall()
     return {"count":len(rows),"items":rows}
+
+@app.get("/api/health/ask")
+def ask(q:str,region:str|None=None,service:str|None=None,lat:float|None=None,lon:float|None=None,radius_km:float=25,limit:int=25):
+    routed=route_health_query(q)
+    agent=routed["agent"]
+    if agent=="health-finder":
+        data=facilities(region,service,lat,lon,radius_km,limit)
+    elif agent=="health-service":
+        data=services(q,limit)
+    elif agent=="health-emergency":
+        with conn() as c:
+            rows=c.execute("""SELECT facility_name,data_time,patients,over_24h,over_48h,present,waiting,source_dataset,source_url
+              FROM emergency_status ORDER BY ingested_at DESC LIMIT %s""",(limit,)).fetchall()
+        data={"count":len(rows),"items":rows}
+    else:
+        data=provenance()
+        with conn() as c:
+            recent=c.execute("""SELECT dataset,change_type,count(*) AS count FROM data_changes
+              WHERE detected_at >= now()-interval '7 days' GROUP BY dataset,change_type
+              ORDER BY dataset,change_type""").fetchall()
+        data["recent_changes"]=recent
+    response={"agent":agent,"query":q,"data":data,"provenance":provenance()}
+    event("health.agent.query",{"agent":agent,"query":q})
+    return response
 
 @app.get("/api/health/provenance")
 def provenance():
