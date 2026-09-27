@@ -95,6 +95,34 @@ def num(v):
         return float(str(v).replace(",",".").replace(" ",""))
     except: return None
 
+def source_checksum(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+def cache_key(prefix, params):
+    raw=json.dumps(params, sort_keys=True, default=str)
+    return "unx4:health:"+prefix+":"+hashlib.sha256(raw.encode()).hexdigest()
+
+def cache_get(key):
+    try:
+        value=redis.get(key)
+        return json.loads(value) if value else None
+    except Exception:
+        return None
+
+def cache_set(key, value, ttl=60):
+    try:
+        redis.setex(key, ttl, json.dumps(value, default=str))
+    except Exception:
+        pass
+
+def invalidate_cache():
+    try:
+        keys=list(redis.scan_iter("unx4:health:*"))
+        if keys:
+            redis.delete(*keys)
+    except Exception:
+        pass
+
 async def ingest_facilities():
     d,r=await resource_csv(SOURCES["facilities"],"installations")
     if not r: raise RuntimeError("CSV installations introuvable")
