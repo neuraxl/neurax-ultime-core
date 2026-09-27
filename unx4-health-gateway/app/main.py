@@ -58,6 +58,11 @@ def init():
         c.execute("""CREATE TABLE IF NOT EXISTS telemetry(
           id BIGSERIAL PRIMARY KEY,event_type TEXT,source TEXT,payload JSONB,
           created_at TIMESTAMPTZ DEFAULT now())""")
+        c.execute("""CREATE TABLE IF NOT EXISTS sync_runs(
+          id BIGSERIAL PRIMARY KEY,dataset TEXT NOT NULL,status TEXT NOT NULL,
+          started_at TIMESTAMPTZ NOT NULL DEFAULT now(),finished_at TIMESTAMPTZ,
+          rows_count INTEGER DEFAULT 0,source_url TEXT,checksum TEXT,
+          changed BOOLEAN DEFAULT TRUE,error TEXT)""")
 
 @app.on_event("startup")
 def startup():
