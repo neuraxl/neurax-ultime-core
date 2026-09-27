@@ -1,0 +1,5 @@
+ALTER TABLE facilities ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE services ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE INDEX IF NOT EXISTS facilities_active_idx ON facilities(active);
+CREATE INDEX IF NOT EXISTS services_active_idx ON services(active);
