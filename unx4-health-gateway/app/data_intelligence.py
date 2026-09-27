@@ -10,7 +10,7 @@ def canonical_map(records: list[dict[str, Any]], key: str) -> dict[str, dict[str
 
 def persist_changes(conn, dataset: str, before: dict[str, dict[str, Any]],
                      after: dict[str, dict[str, Any]], sync_run_id: int) -> list[dict[str, Any]]:
-    changes = diff_records(list(before.values()), list(after.values()))
+    changes = diff_records(before, after)
     for change in changes:
         conn.execute(
             """INSERT INTO data_changes(
