@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from .graph import init_graph, upsert_node, link, graph_snapshot
+from .change_engine import diff_records
 
 DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
 REDIS=os.getenv("REDIS_URL","redis://localhost:6379/0")
@@ -266,6 +267,16 @@ async def sync():
         return results
     finally:
         sync_lock.release()
+
+@app.get("/api/health/changes")
+def changes(dataset:str|None=None,limit:int=100):
+    limit=max(1,min(limit,500))
+    with conn() as c:
+        rows=c.execute("""SELECT id,dataset,entity_id,change_type,changed_fields,before,after,detected_at,sync_run_id
+          FROM data_changes
+          WHERE (%s IS NULL OR dataset=%s)
+          ORDER BY detected_at DESC LIMIT %s""",(dataset,dataset,limit)).fetchall()
+    return {"count":len(rows),"items":rows}
 
 @app.get("/api/health/sync/runs")
 def sync_runs(limit:int=20):
