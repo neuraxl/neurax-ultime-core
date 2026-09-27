@@ -287,6 +287,10 @@ def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lo
         clauses.append("f.geom IS NOT NULL AND ST_DWithin(f.geom::geography,ST_SetSRID(ST_MakePoint(%s,%s),4326)::geography,%s)")
         args += [lon,lat,radius_km*1000]
     where=(" WHERE "+" AND ".join(clauses)) if clauses else ""
+    key=cache_key("facilities",{"region":region,"service":service,"lat":lat,"lon":lon,"radius_km":radius_km,"limit":limit})
+    cached=cache_get(key)
+    if cached is not None:
+        return cached
     with conn() as c:
         rows=c.execute(f"""SELECT f.id,f.name,f.region,f.territory,f.latitude,f.longitude,
           f.source_dataset,f.source_url,
@@ -296,7 +300,9 @@ def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lo
            FROM emergency_status e WHERE e.facility_name ILIKE f.name ORDER BY e.ingested_at DESC LIMIT 1) emergency
           FROM facilities f LEFT JOIN services s ON s.facility_id=f.id {where}
           GROUP BY f.id ORDER BY f.name LIMIT %s""",args+[limit]).fetchall()
-    return {"count":len(rows),"items":rows}
+    payload={"count":len(rows),"items":rows}
+    cache_set(key,payload)
+    return payload
 
 @app.get("/api/health/facilities.geojson")
 def facilities_geojson(region:str|None=None,service:str|None=None,lat:float|None=None,lon:float|None=None,radius_km:float=25,limit:int=1000):
