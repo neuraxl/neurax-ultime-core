@@ -8,6 +8,7 @@ from redis import Redis
 from fastapi import FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from .graph import init_graph, upsert_node, link, graph_snapshot
 
 DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
 REDIS=os.getenv("REDIS_URL","redis://localhost:6379/0")
@@ -110,6 +111,7 @@ async def ingest_facilities():
               (ident,name,str(pick(row,"RSS_Installation","RSS Installation","Région sociosanitaire")),
                str(pick(row,"RTS_Installation","RTS Installation","Territoire")),
                lat,lon,lat,lon,lon,lat,SOURCES["facilities"],r["url"],json.dumps(row,default=str)))
+            upsert_node("facility:"+ident,"Facility",name,row)
             n+=1
     return n,r["url"]
 
@@ -131,6 +133,9 @@ async def ingest_services():
               VALUES(%s,%s,%s,%s,%s,%s,%s)
               ON CONFLICT(facility_id,name,category) DO UPDATE SET capacity=EXCLUDED.capacity,raw=EXCLUDED.raw""",
               (fid,svc,str(cat or ""),str(cap or ""),SOURCES["services"],r["url"],json.dumps(row,default=str)))
+            upsert_node("facility:"+fid,"Facility",fid,{})
+            upsert_node("service:"+fid+":"+svc,"Service",svc,{"category":cat,"capacity":cap})
+            link("facility:"+fid,"service:"+fid+":"+svc,"OFFERS")
             n+=1
     return n,r["url"]
 
@@ -224,6 +229,10 @@ def services(q:str|None=None,limit:int=100):
 def regions():
     with conn() as c: rows=c.execute("SELECT region,count(*) facilities FROM facilities GROUP BY region ORDER BY region").fetchall()
     return {"items":rows}
+
+@app.get("/api/health/graph")
+def graph(limit:int=500):
+    return graph_snapshot(limit)
 
 @app.get("/api/health/telemetry")
 def telemetry(limit:int=100):
