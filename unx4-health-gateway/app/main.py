@@ -266,6 +266,13 @@ async def sync():
     finally:
         sync_lock.release()
 
+@app.get("/api/health/sync/runs")
+def sync_runs(limit:int=20):
+    limit=max(1,min(limit,100))
+    with conn() as c:
+        rows=c.execute("SELECT * FROM sync_runs ORDER BY started_at DESC LIMIT %s",(limit,)).fetchall()
+    return {"count":len(rows),"items":rows}
+
 @app.get("/api/health/facilities")
 def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lon:float|None=None,radius_km:float=25,limit:int=100):
     if radius_km <= 0 or radius_km > 500:
