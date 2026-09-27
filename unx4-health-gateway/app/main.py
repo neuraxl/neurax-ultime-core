@@ -260,6 +260,7 @@ async def sync():
                         c.execute("UPDATE sync_runs SET status='failed',finished_at=now(),error=%s WHERE id=%s",(str(e),run_id))
                 results[name]={"error":str(e),"sync_run_id":run_id}
                 event("health.ingest.error",{"dataset":name,"error":str(e)})
+        invalidate_cache()
         results["duration_ms"]=round((time.perf_counter()-t)*1000,2)
         event("health.sync.completed",results)
         return results
