@@ -1,5 +1,9 @@
-import json
-from .main import conn
+import json, os
+import psycopg
+from psycopg.rows import dict_row
+
+DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
+def conn(): return psycopg.connect(DB,row_factory=dict_row)
 
 def init_graph():
     with conn() as c:
