@@ -1,4 +1,4 @@
-import io, json, math, os, re, time
+import io, json, math, os, re, time, threading
 from datetime import datetime, timezone
 from typing import Any
 import httpx, pandas as pd
@@ -14,7 +14,8 @@ DB=os.getenv("DATABASE_URL","postgresql://unx4:unx4@localhost:5432/unx4")
 REDIS=os.getenv("REDIS_URL","redis://localhost:6379/0")
 CKAN=os.getenv("CKAN_BASE_URL","https://www.donneesquebec.ca/recherche/api/3/action")
 redis=Redis.from_url(REDIS,decode_responses=True)
-app=FastAPI(title="UNX4 Health Gateway",version="0.2.0",description="Public Québec health data gateway for UNX4.")
+app=FastAPI(title="UNX4 Health Gateway",version="0.3.0",description="Public Québec health data gateway for UNX4.")
+sync_lock=threading.Lock()
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
 
 SOURCES={
@@ -174,28 +175,59 @@ async def ingest_emergency():
 @app.get("/")
 def root(): return FileResponse("static/index.html")
 
+@app.get("/healthz")
+def healthz():
+    return {"status":"ok","service":"unx4-health-gateway","version":"0.3.0"}
+
+@app.get("/readyz")
+def readyz():
+    checks={"database":False,"redis":False}
+    try:
+        with conn() as c:
+            c.execute("SELECT 1")
+        checks["database"]=True
+    except Exception:
+        pass
+    try:
+        checks["redis"]=bool(redis.ping())
+    except Exception:
+        pass
+    ok=all(checks.values())
+    return {"status":"ready" if ok else "not_ready","checks":checks}
+
 @app.get("/api/health/status")
 def status():
     with conn() as c:
         db=c.execute("SELECT count(*) n FROM facilities").fetchone()["n"]
         sv=c.execute("SELECT count(*) n FROM services").fetchone()["n"]
         er=c.execute("SELECT count(*) n FROM emergency_status").fetchone()["n"]
-    return {"module":"UNX4 Health Gateway","version":"0.2.0","status":"operational","public_data_only":True,"facilities":db,"services":sv,"emergency_rows":er}
+    return {"module":"UNX4 Health Gateway","version":"0.3.0","status":"operational","public_data_only":True,"facilities":db,"services":sv,"emergency_rows":er}
 
 @app.post("/api/health/sync")
 async def sync():
-    t=time.perf_counter(); results={}
-    for name,fn in [("facilities",ingest_facilities),("services",ingest_services),("emergency",ingest_emergency)]:
-        try:
-            count,url=await fn(); results[name]={"rows":count,"url":url}
-            event(f"health.{name}.ingested",results[name])
-        except Exception as e:
-            results[name]={"error":str(e)}; event("health.ingest.error",{"dataset":name,"error":str(e)})
-    results["duration_ms"]=round((time.perf_counter()-t)*1000,2)
-    return results
+    if not sync_lock.acquire(blocking=False):
+        raise HTTPException(409,"Une synchronisation est déjà en cours")
+    try:
+        t=time.perf_counter(); results={}
+        event("health.sync.started",{})
+        for name,fn in [("facilities",ingest_facilities),("services",ingest_services),("emergency",ingest_emergency)]:
+            try:
+                count,url=await fn(); results[name]={"rows":count,"url":url}
+                event(f"health.{name}.ingested",results[name])
+            except Exception as e:
+                results[name]={"error":str(e)}; event("health.ingest.error",{"dataset":name,"error":str(e)})
+        results["duration_ms"]=round((time.perf_counter()-t)*1000,2)
+        event("health.sync.completed",results)
+        return results
+    finally:
+        sync_lock.release()
 
 @app.get("/api/health/facilities")
 def facilities(region:str|None=None,service:str|None=None,lat:float|None=None,lon:float|None=None,radius_km:float=25,limit:int=100):
+    if radius_km <= 0 or radius_km > 500:
+        raise HTTPException(400,"radius_km doit être compris entre 0 et 500")
+    if limit <= 0 or limit > 1000:
+        raise HTTPException(400,"limit doit être compris entre 1 et 1000")
     clauses=[]; args=[]
     if region: clauses.append("f.region ILIKE %s"); args.append("%"+region+"%")
     if service:
