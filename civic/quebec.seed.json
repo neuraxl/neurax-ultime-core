@@ -1,0 +1,15 @@
+{
+  "version":"0.1.0",
+  "jurisdiction":"quebec",
+  "authority":"Gouvernement du Québec",
+  "sources":[
+    {"id":"quebec-services","name":"Services Québec","url":"https://www.quebec.ca/services-quebec","type":"gateway"},
+    {"id":"quebec","name":"Québec.ca","url":"https://www.quebec.ca/","type":"portal"}
+  ],
+  "services":[
+    {"id":"qc-general","name":"Services Québec","category":"services-publics","keywords":["service québec","gouvernement québec","démarche","renseignement","administratif"],"url":"https://www.quebec.ca/services-quebec"},
+    {"id":"qc-employment","name":"Aide à l’emploi","category":"emploi","keywords":["emploi","chômage","perdre mon emploi","recherche emploi","travail"],"url":"https://www.quebec.ca/emploi/trouver-emploi-stage/programmes/integrer-emploi/services"},
+    {"id":"qc-business","name":"Accompagnement des entreprises","category":"entreprises","keywords":["entreprise","travailleur autonome","startup","financement","innovation"],"url":"https://www.quebec.ca/entreprises-et-travailleurs-autonomes/accompagnement-services"},
+    {"id":"qc-digital","name":"Services numériques gouvernementaux","category":"numérique","keywords":["compte","authentification","numérique","service en ligne"],"url":"https://www.quebec.ca/gouvernement/services-organisations-publiques/services-transformation-numerique"}
+  ]
+}

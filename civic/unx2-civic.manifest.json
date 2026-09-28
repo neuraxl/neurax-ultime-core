@@ -1,0 +1,11 @@
+{
+  "module":"unx2-civic-gateway",
+  "version":"0.4.0",
+  "source":"https://www.canada.ca/fr/contact.html",
+  "functions":["semantic-service-discovery","jurisdiction-routing","contact-routing","organization-directory","official-link-registry","provenance","local-telemetry","natural-language-routing"],
+  "events":["civic.search","civic.route","civic.source.checked","civic.handoff"],
+  "entities":["organization","program","service","audience","life_event","contact","official_url","source_snapshot"],
+  "jurisdictions":["federal","quebec","municipal"],
+  "integrations":{"phase_1":["Canada.ca"],"phase_2":["Québec.ca"],"phase_3":["municipalities"],"phase_4":["Supabase","PostgreSQL","Neo4j","AI Router","WebSocket","freshness-monitor"]},
+  "guardrails":["official-source-first","no-invented-contact-details","human-handoff","provenance-required"]
+}

@@ -1,0 +1,23 @@
+{
+  "source":{"id":"canada-contact","url":"https://www.canada.ca/fr/contact.html","authority":"Canada.ca"},
+  "organizations":[
+    {"id":"canada-ca","name":"Gouvernement du Canada","acronym":"GC","jurisdiction":"federal","official_url":"https://www.canada.ca/fr.html"},
+    {"id":"ircc","name":"Immigration, Réfugiés et Citoyenneté Canada","acronym":"IRCC","jurisdiction":"federal","official_url":"https://www.canada.ca/fr/immigration-refugies-citoyennete.html"},
+    {"id":"cra","name":"Agence du revenu du Canada","acronym":"ARC","jurisdiction":"federal","official_url":"https://www.canada.ca/fr/agence-revenu.html"},
+    {"id":"esdc","name":"Emploi et Développement social Canada","acronym":"EDSC","jurisdiction":"federal","official_url":"https://www.canada.ca/fr/emploi-developpement-social.html"},
+    {"id":"health","name":"Santé Canada","acronym":"SC","jurisdiction":"federal","official_url":"https://www.canada.ca/fr/sante.html"}
+  ],
+  "services":[
+    {"id":"passport","name":"Passeport canadien","organization":"ircc","topics":["voyage"],"official_url":"https://www.canada.ca/fr/immigration-refugies-citoyennete/services/passeport-canadien.html"},
+    {"id":"tax","name":"Impôts des particuliers et entreprises","organization":"cra","topics":["impôts","finances"],"official_url":"https://www.canada.ca/fr/agence-revenu/services/impot.html"},
+    {"id":"sin","name":"Numéro d'assurance sociale","organization":"esdc","topics":["emploi","identité"],"official_url":"https://www.canada.ca/fr/emploi-developpement-social/services/numero-assurance-sociale.html"},
+    {"id":"immigration","name":"Visas, permis et immigration","organization":"ircc","topics":["immigration","citoyenneté"],"official_url":"https://www.canada.ca/fr/immigration-refugies-citoyennete.html"},
+    {"id":"benefits","name":"Prestations et crédits","organization":"canada-ca","topics":["prestations","aide financière"],"official_url":"https://www.canada.ca/fr/services/prestations.html"},
+    {"id":"employment","name":"Emplois et formation","organization":"esdc","topics":["emploi","formation"],"official_url":"https://www.canada.ca/fr/services/emplois.html"},
+    {"id":"health","name":"Services de santé","organization":"health","topics":["santé"],"official_url":"https://www.canada.ca/fr/services/sante.html"},
+    {"id":"funding","name":"Subventions et financement","organization":"canada-ca","topics":["financement","entreprise"],"official_url":"https://www.canada.ca/fr/services/financement.html"}
+  ],
+  "audiences":["Aînés et retraités","Personnes en situation de handicap","Jeunesse","Étudiants","Parents et tuteurs légaux","Proches aidants","Autochtones","Militaires et vétérans","Nouveaux arrivants","Canadiens vivant à l'étranger","Victimes d'actes criminels"],
+  "life_events":["Retraite","Perte d'emploi ou incapacité de travailler","Invalidité","Santé et bien-être","Emplois et formation","Études","Logement","Famille et enfants","Démarrer une entreprise","Mariage ou conjoint de fait","Divorce ou séparation","Décès"],
+  "notes":["Seed initial basé sur les catégories et filtres publics observés sur Canada.ca.","Ne constitue pas une copie exhaustive du contenu gouvernemental.","Les démarches et coordonnées restent chez les sources officielles."]
+}
