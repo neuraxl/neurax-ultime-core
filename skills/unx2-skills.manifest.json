@@ -1,0 +1,1 @@
+{"module":"unx2-skills","version":"0.1.0","events":["learning.course.started","learning.course.completed","learning.lab.started","learning.lab.completed","credential.issued"],"services":["identity","catalog","paths","lab-runtime","ai-tutor","credentials","neural-telemetry"],"next":["supabase","rls","websocket","agent-registry","ai-router","signed-credentials"]}
