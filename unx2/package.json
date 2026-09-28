@@ -1,7 +1,7 @@
 {
   "name":"unx2-business-os",
-  "version":"0.1.0",
+  "version":"0.2.1",
   "private":true,
-  "scripts":{"dev":"vercel dev","build":"echo 'UNX2 static build ready'"},
+  "scripts":{"dev":"vercel dev","build":"echo 'UNX2 static build ready'","validate":"node scripts/validate.mjs","test:e2e":"node tests/e2e.mjs"},
   "dependencies":{"stripe":"^18.5.0"}
 }
