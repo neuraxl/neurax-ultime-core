@@ -1,0 +1,1 @@
+document.querySelector('#search').addEventListener('input',function(){console.log('UNX2 Skills search',this.value)});
