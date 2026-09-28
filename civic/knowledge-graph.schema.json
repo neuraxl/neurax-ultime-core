@@ -1,0 +1,25 @@
+{
+  "schema":"UNX2 Civic Knowledge Graph",
+  "version":"0.3.0",
+  "nodes":{
+    "organization":{"key":"id","fields":["name","acronym","jurisdiction","official_url"]},
+    "program":{"key":"id","fields":["name","type","description","official_url"]},
+    "service":{"key":"id","fields":["name","category","keywords","official_url"]},
+    "audience":{"key":"id","fields":["name"]},
+    "life_event":{"key":"id","fields":["name"]},
+    "topic":{"key":"id","fields":["name"]},
+    "source":{"key":"id","fields":["url","authority","checked_at"]}
+  },
+  "relationships":[
+    "ORGANIZATION -[OFFERS]-> PROGRAM",
+    "PROGRAM -[PROVIDES]-> SERVICE",
+    "SERVICE -[TARGETS]-> AUDIENCE",
+    "SERVICE -[SUPPORTS]-> LIFE_EVENT",
+    "SERVICE -[ABOUT]-> TOPIC",
+    "SERVICE -[SOURCED_FROM]-> SOURCE"
+  ],
+  "jurisdictions":["federal","provincial","municipal"],
+  "phase_1":{"authority":"Canada.ca","observed_service_families":["Employment Insurance and leave","Benefits and financial assistance","Passports","Pensions","Immigration and citizenship","Jobs","Business and industry","Health","Taxes","Environment and natural resources","National security and defence","Culture, history and sport","Policing, justice and emergencies","Transport and infrastructure","Canada and the world","Money and finance","Science and innovation","Life events"]},
+  "phase_2":{"target":"Québec","status":"planned"},
+  "phase_3":{"target":"municipalities","status":"planned"}
+}
