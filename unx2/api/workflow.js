@@ -1,20 +1,18 @@
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+import {requireOrgMember,supabaseFetch} from "./_lib/supabase.js";
+import {runLeviathan} from "./_lib/leviathan.js";
 export default async function handler(req,res){
-  if(req.method!=="POST") return res.status(405).json({error:"Method not allowed"});
-  const started=Date.now();
-  const steps=[
-    ["lead.received","Lead Agent"],
-    ["research.completed","Research Agent"],
-    ["lead.qualified","Lead Agent"],
-    ["response.drafted","Email Agent"],
-    ["crm.updated","Lead Agent"]
-  ];
-  const events=steps.map(([event,agent],i)=>({event,agent,status:"success",latency_ms:180+i*70}));
-  await sleep(40);
-  res.status(200).json({
-    run_id:crypto.randomUUID(),
-    status:"completed",
-    duration_ms:Date.now()-started,
-    events
-  });
+  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
+  try{
+    const {organizationId,name="Lead qualification",steps}=req.body||{}; const {token}=await requireOrgMember(req,organizationId);
+    const definition={steps:steps||[
+      {event:"lead.received",agent:"Lead Agent"},
+      {event:"research.completed",agent:"Research Agent"},
+      {event:"lead.qualified",agent:"Lead Agent"},
+      {event:"response.drafted",agent:"Email Agent"},
+      {event:"crm.updated",agent:"Lead Agent"}
+    ]};
+    const workflow=(await supabaseFetch("workflows",{method:"POST",body:{organization_id:organizationId,name,definition,status:"active"},token}))[0];
+    const result=await runLeviathan({organizationId,workflowId:workflow.id,steps:definition.steps,token});
+    return res.status(200).json({workflow_id:workflow.id,...result});
+  }catch(e){return res.status(/Unauthorized|Forbidden/.test(e.message)?401:500).json({error:e.message})}
 }
