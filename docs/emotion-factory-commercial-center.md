@@ -44,11 +44,13 @@ Evolve the existing tenant-scoped CRM MVP into a commercial operating system for
 - Every agent run records tenant, actor, agent/version, input references, output, status, and approval requirement. Minimize personal data sent to providers.
 
 ### 4. Stripe and revenue
-- Stripe Connect vs. a single Stripe account must be decided based on whether UNX2 will bill only EMOTION FACTORY or support independent tenant merchants.
+- **Decision for launch: one Stripe account owned by EMOTION FACTORY.** EMOTION FACTORY sells its own services and collects its own invoices; this is the simplest operating and reconciliation model.
+- Do not use Stripe Connect at launch. Introduce Connect only if UNX2 later enables independent tenant businesses to sell to their own customers and receive payouts through the platform.
+- Keep the payment layer provider-abstracted so Connect can be added later without redesigning invoices, customers, or payment records.
 - Use hosted Checkout / Billing Portal where suitable; verify webhook signatures; process events idempotently; never store card numbers or CVC.
 - Keep internal invoices and payments as the accounting source of record; Stripe events are payment evidence and reconciliation inputs.
 - Separate quote value, invoiced revenue, collected cash, refunds, taxes, and recurring revenue.
-- Stripe is not connected by this change. API keys, webhook secret, account model, and test/live mode must be configured explicitly before enabling payments.
+- Stripe is not connected by this change. API keys, webhook secret, account account, and test/live mode must be configured explicitly before enabling payments.
 
 ### 5. Client portal and creative approvals
 - Separate customer identity from staff identity; customer access is invitation-based and scoped to that customer's records only.
