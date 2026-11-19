@@ -298,7 +298,6 @@ async def register(payload: RegisterRequest, principal: TenantPrincipal = Depend
         raise HTTPException(status_code=409, detail="A connector of this type is already registered for this project.")
     item = Connector(id=connector_id, organization_id=principal.organization_id, project_id=payload.project_id, name=payload.name, kind=payload.kind, version=payload.version or project.latest_release, endpoint=payload.endpoint, capabilities=payload.capabilities, permissions={"default": "deny"}, enabled=False)
     db.add(item)
-    project.status = "registered"
     await db.commit()
     return {"connector_id": connector_id, "status": "registered", "enabled": False, "note": "Connectors are deny-by-default and require explicit agent grants."}
 
