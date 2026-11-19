@@ -112,7 +112,7 @@ async def get_db():
 
 async def require_admin(x_unx2_registry_token: str | None = Header(default=None)) -> None:
     expected = getattr(settings, "os_registry_admin_token", None)
-    if not expected:
+    if not expected or expected == "CHANGE_ME_TO_A_LONG_RANDOM_SECRET":
         raise HTTPException(status_code=503, detail="Registry write operations disabled: configure OS_REGISTRY_ADMIN_TOKEN.")
     if not x_unx2_registry_token or not secrets.compare_digest(x_unx2_registry_token, expected):
         raise HTTPException(status_code=401, detail="Invalid registry administrator token.")
@@ -138,9 +138,13 @@ class GrantRequest(BaseModel):
     max_cost_usd: float = Field(default=0.0, ge=0.0, le=100000.0)
 
 
+class ConnectorToggleRequest(BaseModel):
+    enabled: bool
+
+
 class PlanRequest(BaseModel):
     connector_id: str
-    image: str = Field(min_length=3, max_length=300)
+    image: str = Field(min_length=3, max_length=300, pattern="^[A-Za-z0-9./:_-]+$")
     service_name: str = Field(min_length=2, max_length=60, pattern="^[a-z][a-z0-9_-]*$")
     host_port: int | None = Field(default=None, ge=1024, le=65535)
     container_port: int | None = Field(default=None, ge=1, le=65535)
@@ -309,6 +313,16 @@ async def set_permissions(connector_id: str, payload: GrantRequest, db: AsyncSes
         changed.append(tool_name)
     await db.commit()
     return {"agent_id": payload.agent_id, "connector_id": connector_id, "tools": changed, "allowed": payload.allowed, "max_cost_usd": payload.max_cost_usd}
+
+
+@router.post("/registry/{connector_id}/enable", dependencies=[Depends(require_admin)])
+async def toggle_connector(connector_id: str, payload: ConnectorToggleRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    connector = await db.get(Connector, connector_id)
+    if not connector:
+        raise HTTPException(status_code=404, detail="Connector not found.")
+    connector.enabled = payload.enabled
+    await db.commit()
+    return {"connector_id": connector_id, "enabled": connector.enabled, "default_permission": "deny"}
 
 
 @router.get("/agents/{agent_id}/tools")
