@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from pathlib import Path
 from redis.asyncio import Redis
 from sqlalchemy import text
 
@@ -33,6 +35,11 @@ app = FastAPI(
 )
 app.include_router(auth_router)
 app.include_router(crm_router)
+
+
+@app.get("/", include_in_schema=False)
+async def emotion_factory_workspace():
+    return FileResponse(Path(__file__).parent / "static" / "index.html")
 
 
 @app.get("/health/live", tags=["health"])
