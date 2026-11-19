@@ -50,7 +50,7 @@ Evolve the existing tenant-scoped CRM MVP into a commercial operating system for
 - Use hosted Checkout / Billing Portal where suitable; verify webhook signatures; process events idempotently; never store card numbers or CVC.
 - Keep internal invoices and payments as the accounting source of record; Stripe events are payment evidence and reconciliation inputs.
 - Separate quote value, invoiced revenue, collected cash, refunds, taxes, and recurring revenue.
-- Stripe is not connected by this change. API keys, webhook secret, account account, and test/live mode must be configured explicitly before enabling payments.
+- Stripe is not connected by this change. API keys, webhook secret, Stripe account, and test/live mode must be configured explicitly before enabling payments.
 
 ### 5. Client portal and creative approvals
 - Separate customer identity from staff identity; customer access is invitation-based and scoped to that customer's records only.
@@ -72,6 +72,15 @@ Evolve the existing tenant-scoped CRM MVP into a commercial operating system for
 - Store files in private object storage, with metadata in PostgreSQL.
 - Use an outbox/webhook event pattern for reliable external integrations; background jobs in Redis are not a substitute for idempotency.
 - All external actions require explicit authorization and auditable approval: sending proposals/contracts, publishing campaigns, charging/refunding, and sending client communications.
+
+## Launch decisions
+
+- Launch EMOTION FACTORY as the first operating business on UNX2; keep the data model tenant-ready, but do not launch a multi-merchant SaaS billing product yet.
+- Use one EMOTION FACTORY Stripe account for its own sales at launch; defer Stripe Connect until independent tenant merchants need payouts.
+- Keep customer portal identities separate from staff identities; clients only see their own organization, projects, documents, and approvals.
+- Use CAD as the initial operating currency, while storing an explicit currency code on every quote, invoice, and payment so future expansion does not require schema redesign.
+- Treat AI output as a draft until a named staff member approves it; no autonomous external messages, contract execution, publication, charges, or refunds.
+- Build the security and migration foundation before adding financial records or onboarding real customers.
 
 ## Recommended implementation sequence
 
