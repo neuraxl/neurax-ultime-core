@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from .database import engine
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     os_registry_admin_token: str | None = None
 
 settings = Settings()
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
 @asynccontextmanager
