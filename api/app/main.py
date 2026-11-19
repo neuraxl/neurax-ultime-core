@@ -56,7 +56,7 @@ async def modules() -> dict[str, Any]:
     return {"platform": "UNX2", "modules": [
         {"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"},
         {"id": "open-source-registry", "name": "UNX2 Open Source Registry", "status": "foundation"}],
-        "note": "CRM and commercial actions remain disabled until tenant authentication, authorization, audit logging, and migrations are implemented."}
+        "note": "Tenant identity, API-key hashing, RBAC primitives, audit events, and Alembic migrations are available; registry data-plane tenant isolation remains a required next step before commercial activation."}
 
 from .open_source_registry import router as open_source_registry_router
 app.include_router(open_source_registry_router)
