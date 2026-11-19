@@ -14,9 +14,9 @@ from app import security
 async def test_registry_resources_are_isolated_between_organizations():
     # Combine both declarative metadata collections so cross-module FKs resolve.
     metadata = MetaData()
-    for table in security.SecurityBase.metadata.sorted_tables:
+    for table in security.SecurityBase.metadata.tables.values():
         table.to_metadata(metadata)
-    for table in registry.RegistryBase.metadata.sorted_tables:
+    for table in registry.RegistryBase.metadata.tables.values():
         table.to_metadata(metadata)
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
