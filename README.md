@@ -61,3 +61,33 @@ EMOTION FACTORY remains an independently branded commercial module running on UN
 ## Security notice
 
 This Compose configuration is for local development only. Do not deploy with example credentials or expose the API publicly until production secrets, authentication, TLS, network policy, backups, migrations, and monitoring are configured. No external AI, email, CRM, payment, or creative provider is claimed to be connected.
+
+
+## UNX2 Security & Tenant Gateway v0.3 foundation
+
+The additive security module introduces:
+- Organization provisioning through the existing platform-admin token.
+- Per-organization API credentials. The secret is returned once and only its SHA-256 hash is stored.
+- Credential roles (owner, admin, member, viewer), expiry, and revocation state in the data model.
+- Tenant identity endpoint: `GET /api/v1/security/me` using `Authorization: Bearer <tenant-api-key>`.
+- Organization-scoped audit retrieval: `GET /api/v1/security/audit-events` for owner/admin credentials.
+- Versioned Alembic migration for organization, credential, membership, and audit tables.
+
+### Apply the new schema
+
+From the `api` directory, with `DATABASE_URL` configured:
+
+```bash
+alembic upgrade head
+```
+
+The migration creates new tenant-security tables only; it does not drop or rewrite existing registry tables or MQTT data.
+
+### Provisioning
+
+1. Configure a strong `OS_REGISTRY_ADMIN_TOKEN` outside source control.
+2. Call `POST /api/v1/security/organizations` with `X-UNX2-Registry-Token`.
+3. Call `POST /api/v1/security/organizations/{organization_id}/keys` with the same administrative header.
+4. Save the returned API key securely; its secret cannot be retrieved again.
+
+**Important implementation boundary:** this is the tenant identity and audit foundation, not yet full registry data isolation. Existing Open Source Registry endpoints still use the platform-wide data model and legacy admin-token protection. Do not expose those endpoints to tenant clients until connector, grant, integration-plan, and usage queries are migrated to organization-scoped access controls. The existing MQTT broker, port 1883, and topics remain unchanged.
