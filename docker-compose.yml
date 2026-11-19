@@ -1,1 +1,60 @@
+services:
+  mqtt:
+    build:
+      context: .
+      dockerfile: Dockerfile.mqtt
+    container_name: unx2-mqtt
+    restart: unless-stopped
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
 
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: unx2-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-unx2}:${POSTGRES_PASSWORD:-unx2_dev_only}@postgres:5432/${POSTGRES_DB:-unx2}
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: unx2-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-unx2}
+      POSTGRES_USER: ${POSTGRES_USER:-unx2}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-unx2_dev_only}
+    volumes:
+      - unx2_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-unx2} -d ${POSTGRES_DB:-unx2}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: unx2-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - unx2_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  unx2_postgres_data:
+  unx2_redis_data:
