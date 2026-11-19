@@ -25,7 +25,7 @@ async def lifespan(_: FastAPI):
     await engine.dispose()
     await redis_client.aclose()
 
-app = FastAPI(title="UNX2 Core API", version="0.2.0",
+app = FastAPI(title="UNX2 Core API", version="0.3.0",
     description="UNX2 Core API with an additive open-source discovery and connector registry. Existing MQTT broker remains independent.",
     lifespan=lifespan)
 
@@ -61,3 +61,6 @@ async def modules() -> dict[str, Any]:
 
 from .open_source_registry import router as open_source_registry_router
 app.include_router(open_source_registry_router)
+
+from .security import router as security_router
+app.include_router(security_router)
