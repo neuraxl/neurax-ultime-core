@@ -63,18 +63,18 @@ async def test_registry_resources_are_isolated_between_organizations():
         ])
         await db.flush()
         db.add(registry.Connector(
-            id=f"connector:{org_a}:github:owner/repo:api",
+            id=registry._connector_id(org_a, "github:owner/repo", "api"),
             organization_id=org_a, project_id="github:owner/repo", name="A connector",
             kind="api", capabilities=["read"], permissions={"default": "deny"}, enabled=True,
         ))
         await db.flush()
-        connector_id = f"connector:{org_a}:github:owner/repo:api"
+        connector_id = registry._connector_id(org_a, "github:owner/repo", "api")
         grant_id = registry._grant_id(org_a, "agent-a", connector_id, "read")
         db.add(registry.AgentGrant(id=grant_id, organization_id=org_a, agent_id="agent-a", connector_id=connector_id, tool_name="read", allowed=True, max_cost_usd=5.0))
         db.add(registry.IntegrationPlan(id="plan-a", organization_id=org_a, connector_id=connector_id, compose_yaml="services: {}", snapshot={}, status="planned"))
         await db.commit()
 
-    connector_a = f"connector:{org_a}:github:owner/repo:api"
+    connector_a = registry._connector_id(org_a, "github:owner/repo", "api")
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
