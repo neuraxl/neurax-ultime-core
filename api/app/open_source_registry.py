@@ -165,6 +165,11 @@ class UsageRequest(BaseModel):
     success: bool = False
 
 
+def _connector_id(organization_id: str, project_id: str, kind: str) -> str:
+    raw = f"{organization_id}|{project_id}|{kind}".encode("utf-8")
+    return "connector:" + hashlib.sha256(raw).hexdigest()
+
+
 def _grant_id(organization_id: str, agent_id: str, connector_id: str, tool_name: str) -> str:
     raw = f"{organization_id}|{agent_id}|{connector_id}|{tool_name}".encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
@@ -292,7 +297,7 @@ async def register(payload: RegisterRequest, principal: TenantPrincipal = Depend
         raise HTTPException(status_code=404, detail="Discover the project before registering it.")
     if principal.role not in {"owner", "admin"}:
         raise HTTPException(status_code=403, detail="Organization administrator role required.")
-    connector_id = f"connector:{principal.organization_id}:{payload.project_id}:{payload.kind}"
+    connector_id = _connector_id(principal.organization_id, payload.project_id, payload.kind)
     existing = await db.get(Connector, connector_id)
     if existing:
         raise HTTPException(status_code=409, detail="A connector of this type is already registered for this project.")
