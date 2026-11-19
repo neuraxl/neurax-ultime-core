@@ -1,0 +1,1 @@
+UNX2 schema migrations are managed with Alembic. From the api directory, configure DATABASE_URL and run `alembic upgrade head`. Review migration SQL and back up PostgreSQL before applying migrations to an existing environment. The initial migration creates only tenant identity tables; it does not alter existing registry or MQTT data.

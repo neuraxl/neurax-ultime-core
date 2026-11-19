@@ -1,24 +1,11 @@
 from contextlib import asynccontextmanager
 from typing import Any
-
 from fastapi import FastAPI, HTTPException
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
-
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = "postgresql+psycopg://unx2:unx2_dev_only@postgres:5432/unx2"
-    redis_url: str = "redis://redis:6379/0"
-    environment: str = "development"
-
-
-settings = Settings()
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+from .config import settings
+from .database import engine
 redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
-
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -26,19 +13,13 @@ async def lifespan(_: FastAPI):
     await engine.dispose()
     await redis_client.aclose()
 
-
-app = FastAPI(
-    title="UNX2 Core API",
-    version="0.1.0",
-    description="Additive API service for UNX2. Existing MQTT broker remains a separate service.",
-    lifespan=lifespan,
-)
-
+app = FastAPI(title="UNX2 Core API", version="0.3.0",
+    description="UNX2 Core API with an additive open-source discovery and connector registry. Existing MQTT broker remains independent.",
+    lifespan=lifespan)
 
 @app.get("/health/live", tags=["health"])
 async def liveness() -> dict[str, str]:
     return {"status": "ok", "service": "unx2-api"}
-
 
 @app.get("/health/ready", tags=["health"])
 async def readiness() -> dict[str, Any]:
@@ -59,11 +40,15 @@ async def readiness() -> dict[str, Any]:
         raise HTTPException(status_code=503, detail={"status": status, "checks": checks})
     return {"status": status, "checks": checks}
 
-
 @app.get("/api/v1/modules", tags=["modules"])
 async def modules() -> dict[str, Any]:
-    return {
-        "platform": "UNX2",
-        "modules": [{"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"}],
-        "note": "CRM and commercial actions remain disabled until tenant authentication, authorization, audit logging, and migrations are implemented.",
-    }
+    return {"platform": "UNX2", "modules": [
+        {"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"},
+        {"id": "open-source-registry", "name": "UNX2 Open Source Registry", "status": "foundation"}],
+        "note": "Tenant identity, API-key hashing, RBAC primitives, audit events, and Alembic migrations are available; registry data-plane tenant isolation remains a required next step before commercial activation."}
+
+from .open_source_registry import router as open_source_registry_router
+app.include_router(open_source_registry_router)
+
+from .security import router as security_router
+app.include_router(security_router)

@@ -1,0 +1,29 @@
+name: UNX2 Registry Checks
+
+on:
+  push:
+    branches: ["feat/unx2-open-source-registry"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  api-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API dependencies
+        run: pip install -r api/requirements-dev.txt
+      - name: Compile API modules
+        run: python -m compileall -q api/app
+      - name: Import FastAPI application and verify tenant routes
+        working-directory: api
+        run: python -c "from app.main import app; assert '/api/v1/security/me' in app.openapi()['paths']; print(app.title)"
+      - name: Validate Alembic migration graph
+        working-directory: api
+        run: alembic history
+      - name: Run tenant isolation tests
+        working-directory: api
+        run: pytest -q tests
