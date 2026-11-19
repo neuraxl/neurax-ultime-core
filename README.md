@@ -32,6 +32,7 @@ All write endpoints require the X-UNX2-Registry-Token header. If OS_REGISTRY_ADM
 - POST /api/v1/open-source/registry — register a discovered project as an API, MCP, webhook, service, or library connector.
 - GET /api/v1/open-source/registry — list registered connectors.
 - POST /api/v1/open-source/registry/{connector_id}/permissions — grant or revoke named tools for an agent with a per-call cost ceiling.
+- POST /api/v1/open-source/registry/{connector_id}/enable — explicitly enable or disable a connector; tool grants remain deny-by-default.
 - GET /api/v1/open-source/agents/{agent_id}/tools — list tools allowed for an agent on enabled connectors.
 - POST /api/v1/open-source/integrations/plan — generate a hardened Docker Compose service proposal.
 - POST /api/v1/open-source/integrations/{plan_id}/test — statically validate the integration proposal.
