@@ -6,6 +6,7 @@ and validate plans; they never start containers or execute repository code.
 from __future__ import annotations
 
 import base64
+import hashlib
 import re
 import secrets
 from datetime import datetime, timezone
@@ -31,7 +32,7 @@ class RegistryBase(DeclarativeBase):
 
 class Project(RegistryBase):
     __tablename__ = "unx2_os_projects"
-    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
     repo_url: Mapped[str] = mapped_column(String(500), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(200), index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -54,7 +55,7 @@ class Project(RegistryBase):
 
 class Connector(RegistryBase):
     __tablename__ = "unx2_os_connectors"
-    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("unx2_os_projects.id"), index=True)
     name: Mapped[str] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(30), default="api")
@@ -70,7 +71,7 @@ class AgentGrant(RegistryBase):
     __tablename__ = "unx2_os_agent_grants"
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
     agent_id: Mapped[str] = mapped_column(String(200), index=True)
-    connector_id: Mapped[str] = mapped_column(ForeignKey("unx2_os_connectors.id"), index=True)
+    connector_id: Mapped[str] = mapped_column(String(255), ForeignKey("unx2_os_connectors.id"), index=True)
     tool_name: Mapped[str] = mapped_column(String(200))
     allowed: Mapped[bool] = mapped_column(Boolean, default=False)
     max_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
@@ -162,6 +163,11 @@ class UsageRequest(BaseModel):
     tool_name: str
     cost_usd: float = Field(ge=0.0)
     success: bool = False
+
+
+def _grant_id(agent_id: str, connector_id: str, tool_name: str) -> str:
+    raw = f"{agent_id}|{connector_id}|{tool_name}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def _github_repo(url: str) -> tuple[str, str, str]:
@@ -308,7 +314,7 @@ async def set_permissions(connector_id: str, payload: GrantRequest, db: AsyncSes
         raise HTTPException(status_code=404, detail="Connector not found.")
     changed = []
     for tool_name in payload.tool_names:
-        grant_id = f"{payload.agent_id}:{connector_id}:{tool_name}"
+        grant_id = _grant_id(payload.agent_id, connector_id, tool_name)
         grant = await db.get(AgentGrant, grant_id)
         if grant:
             grant.allowed, grant.max_cost_usd = payload.allowed, payload.max_cost_usd
@@ -382,7 +388,7 @@ async def orchestration_plan(payload: OrchestrationRequest, db: AsyncSession = D
 
 @router.post("/usage", dependencies=[Depends(require_admin)])
 async def record_usage(payload: UsageRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    grant_id = f"{payload.agent_id}:{payload.connector_id}:{payload.tool_name}"
+    grant_id = _grant_id(payload.agent_id, payload.connector_id, payload.tool_name)
     grant = await db.get(AgentGrant, grant_id)
     if not grant or not grant.allowed:
         raise HTTPException(status_code=403, detail="No active grant for this agent/tool combination.")
