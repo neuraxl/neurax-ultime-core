@@ -1,7 +1,7 @@
 import hashlib
 
 import pytest
-from fastapi.testclient import TestClient
+import httpx
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -67,23 +67,24 @@ async def test_registry_resources_are_isolated_between_organizations():
 
     connector_a = f"connector:{org_a}:github:owner/repo:api"
     try:
-        with TestClient(app) as client:
-            response_a = client.get("/api/v1/open-source/registry", headers={"Authorization": f"Bearer {token_a}"})
-            response_b = client.get("/api/v1/open-source/registry", headers={"Authorization": f"Bearer {token_b}"})
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response_a = await client.get("/api/v1/open-source/registry", headers={"Authorization": f"Bearer {token_a}"})
+            response_b = await client.get("/api/v1/open-source/registry", headers={"Authorization": f"Bearer {token_b}"})
             assert response_a.status_code == 200
             assert [x["id"] for x in response_a.json()["items"]] == [connector_a]
             assert response_b.status_code == 200
             assert response_b.json()["items"] == []
 
             # Knowing another tenant's resource ID does not grant access.
-            denied = client.post(
+            denied = await client.post(
                 f"/api/v1/open-source/registry/{connector_a}/enable",
                 headers={"Authorization": f"Bearer {token_b}"},
                 json={"enabled": False},
             )
             assert denied.status_code == 404
 
-            tools_b = client.get(
+            tools_b = await client.get(
                 "/api/v1/open-source/agents/agent-a/tools",
                 headers={"Authorization": f"Bearer {token_b}"},
             )
