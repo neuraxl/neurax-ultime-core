@@ -1,38 +1,59 @@
 # NeuraX Ultime Core (UNX2)
 
-Core services for the NeuraX / UNX2 ecosystem.
+Shared platform for NeuraX / UNX2 and independently branded business workspaces.
 
 ## Services
 
-- **MQTT broker:** existing Aedes broker, retained as an independent service on port 1883.
-- **UNX2 API:** additive FastAPI service on port 8000.
-- **PostgreSQL 16:** persistent relational data service.
-- **Redis 7:** cache and coordination service.
+- **MQTT:** existing Aedes broker retained on port 1883.
+- **FastAPI:** UNX2 API on port 8000.
+- **PostgreSQL 16:** persistent CRM data.
+- **Redis 7:** cache / coordination service and readiness check.
 
-The new API and data services are added alongside MQTT. The existing Node.js broker entry point remains `server/broker.js`.
+## EMOTION FACTORY CRM — MVP
 
-## Local development
+The API currently provides:
+- workspace registration (creates a dedicated tenant and first owner);
+- email/password login with signed JWT access tokens;
+- authenticated user profile;
+- tenant-scoped contacts (list, create, read, update, delete);
+- tenant-scoped leads (list, create, update) with new / qualified / proposal / won / lost stages;
+- tenant-scoped activities linked to a contact or lead;
+- workspace dashboard counts and open pipeline total.
+
+All CRM queries derive tenant_id from the verified JWT and filter records by that tenant. A contact or lead belonging to another workspace is not returned by ID and cannot be attached to a record in the current workspace.
+
+### Start locally
 
 1. Copy `.env.example` to `.env`.
-2. Replace `POSTGRES_PASSWORD` with a strong local secret.
-3. Start the stack with Docker Compose: `docker compose up --build`.
-4. Check API liveness at `http://localhost:8000/health/live`.
-5. Check dependencies at `http://localhost:8000/health/ready`.
-6. Open API documentation at `http://localhost:8000/docs`.
+2. Set unique strong values for `POSTGRES_PASSWORD` and `JWT_SECRET` (at least 32 random bytes).
+3. Run `docker compose up --build`.
+4. Open `http://localhost:8000/docs`.
+5. Register a workspace with `POST /api/v1/auth/register`, then use the returned bearer token for `/api/v1/crm/*`.
 
-Default ports: MQTT 1883, API 8000. PostgreSQL and Redis are internal to the Compose network and are not published to the host.
+Health checks:
+- `GET /health/live`
+- `GET /health/ready`
 
-## EMOTION FACTORY
+MQTT remains available separately on port 1883.
 
-EMOTION FACTORY is planned as an independently branded commercial module running on UNX2 shared infrastructure. Its initial API module registry entry is present; CRM, customer data, billing, and external actions are intentionally not enabled yet.
+## CRM interface
 
-Before enabling commercial workflows, implement and test:
-- authentication and role-based authorization;
-- tenant isolation and database migrations;
-- audit logging and consent records;
-- secret management for third-party integrations;
-- approval gates for outbound messages, contracts, charges, ad spend, and publication.
+The responsive French-language workspace is served at `/` and includes sign-in / workspace registration, KPI dashboard, prospect pipeline, contacts directory, lead editing, and activity tracking. It calls the authenticated UNX2 API directly; the access token is held in browser session storage and cleared on logout.
 
-## Security notice
+## API routes
 
-This Compose configuration is for local development only. Do not deploy with example credentials or expose the API publicly until production secrets, authentication, TLS, network policy, backups, migrations, and monitoring are configured. No external AI, email, CRM, payment, or creative provider is claimed to be connected.
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `GET /api/v1/crm/dashboard`
+- `GET|POST /api/v1/crm/contacts`
+- `GET|PATCH|DELETE /api/v1/crm/contacts/{contact_id}`
+- `GET|POST /api/v1/crm/leads`
+- `PATCH /api/v1/crm/leads/{lead_id}`
+- `GET|POST /api/v1/crm/activities`
+
+## Important maturity and security limits
+
+This is a functional development MVP, not a production-ready CRM. Schema bootstrap currently uses SQLAlchemy `create_all`; versioned Alembic migrations must replace this before production. Tenant isolation is enforced in the application query layer; PostgreSQL row-level security policies and automated cross-tenant penetration tests are still required. The initial registration endpoint creates an owner account; team invitations, granular RBAC, password reset, email verification, login throttling, audit log, consent / CASL workflows, data export/deletion, backups, and production secret management remain to be implemented. Do not expose this API publicly or store real customer data until those controls are complete.
+
+No email, payment, AI provider, marketing automation, or external CRM integration is claimed to be connected. External messages, contracts, charges, paid campaigns, and publications remain outside this MVP and require explicit human approval when added.
