@@ -6,7 +6,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
 import httpx
-from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.main import app
@@ -16,12 +15,8 @@ from app import security
 
 @pytest.mark.asyncio
 async def test_registry_resources_are_isolated_between_organizations():
-    # Combine both declarative metadata collections so cross-module FKs resolve.
-    metadata = MetaData()
-    for table in security.SecurityBase.metadata.tables.values():
-        table.to_metadata(metadata)
-    for table in registry.RegistryBase.metadata.tables.values():
-        table.to_metadata(metadata)
+    # Security and registry models now share one declarative metadata collection.
+    metadata = security.SecurityBase.metadata
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:
