@@ -228,10 +228,14 @@ async def discover(payload: DiscoverRequest, db: AsyncSession = Depends(get_db))
             entry = files.get(filename.lower())
             if not entry or not entry.get("download_url"):
                 continue
-            raw = await client.get(entry["download_url"])
-            if raw.status_code != 200:
+            manifest = await _github_json(client, f"/repos/{owner}/{repo}/contents/{filename}")
+            encoded = (manifest or {}).get("content")
+            if not encoded:
                 continue
-            text = raw.text[:200000]
+            try:
+                text = base64.b64decode(encoded).decode("utf-8", "replace")[:200000]
+            except Exception:
+                continue
             if filename == "package.json":
                 import json
                 try:
