@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install API dependencies
-        run: pip install -r api/requirements.txt
+        run: pip install -r api/requirements-dev.txt
       - name: Compile API modules
         run: python -m compileall -q api/app
       - name: Import FastAPI application and verify tenant routes
@@ -24,3 +24,6 @@ jobs:
       - name: Validate Alembic migration graph
         working-directory: api
         run: alembic history
+      - name: Run tenant isolation tests
+        working-directory: api
+        run: pytest -q tests
