@@ -24,12 +24,30 @@ class ContactIn(BaseModel):
     notes: str | None = None
 
 
+class ContactPatch(BaseModel):
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, max_length=100)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=40)
+    company: str | None = Field(default=None, max_length=160)
+    notes: str | None = None
+
+
 class LeadIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     contact_id: str | None = None
     source: str | None = Field(default=None, max_length=80)
     status: str = "new"
     value_cents: int = Field(default=0, ge=0)
+    notes: str | None = None
+
+
+class LeadPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    contact_id: str | None = None
+    source: str | None = Field(default=None, max_length=80)
+    status: str | None = None
+    value_cents: int | None = Field(default=None, ge=0)
     notes: str | None = None
 
 
@@ -75,7 +93,10 @@ async def list_contacts(db: Db, user: Actor, limit: int = Query(50, ge=1, le=200
 
 @router.post("/contacts", status_code=201)
 async def create_contact(data: ContactIn, db: Db, user: Actor):
-    c = Contact(tenant_id=user.tenant_id, **data.model_dump())
+    payload = data.model_dump()
+    if payload.get("email"):
+        payload["email"] = str(payload["email"])
+    c = Contact(tenant_id=user.tenant_id, **payload)
     db.add(c)
     await db.commit()
     await db.refresh(c)
@@ -91,11 +112,14 @@ async def get_contact(contact_id: str, db: Db, user: Actor):
 
 
 @router.patch("/contacts/{contact_id}")
-async def update_contact(contact_id: str, data: ContactIn, db: Db, user: Actor):
+async def update_contact(contact_id: str, data: ContactPatch, db: Db, user: Actor):
     c = await db.scalar(select(Contact).where(Contact.id == contact_id, Contact.tenant_id == user.tenant_id))
     if c is None:
         raise HTTPException(404, "Contact not found")
-    for key, value in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    if payload.get("email"):
+        payload["email"] = str(payload["email"])
+    for key, value in payload.items():
         setattr(c, key, value)
     await db.commit()
     await db.refresh(c)
@@ -123,11 +147,9 @@ async def list_leads(db: Db, user: Actor, status: str | None = None,
 
 @router.post("/leads", status_code=201)
 async def create_lead(data: LeadIn, db: Db, user: Actor):
-    if data.contact_id:
-        contact = await db.scalar(select(Contact).where(
-            Contact.id == data.contact_id, Contact.tenant_id == user.tenant_id))
-        if contact is None:
-            raise HTTPException(404, "Contact not found in this workspace")
+    if data.contact_id and await db.scalar(select(Contact.id).where(
+        Contact.id == data.contact_id, Contact.tenant_id == user.tenant_id)) is None:
+        raise HTTPException(404, "Contact not found in this workspace")
     if data.status not in {"new", "qualified", "proposal", "won", "lost"}:
         raise HTTPException(422, "Invalid lead status")
     lead = Lead(tenant_id=user.tenant_id, **data.model_dump())
@@ -138,18 +160,16 @@ async def create_lead(data: LeadIn, db: Db, user: Actor):
 
 
 @router.patch("/leads/{lead_id}")
-async def update_lead(lead_id: str, data: LeadIn, db: Db, user: Actor):
+async def update_lead(lead_id: str, data: LeadPatch, db: Db, user: Actor):
     lead = await db.scalar(select(Lead).where(Lead.id == lead_id, Lead.tenant_id == user.tenant_id))
     if lead is None:
         raise HTTPException(404, "Lead not found")
     payload = data.model_dump(exclude_unset=True)
-    if payload.get("status", lead.status) not in {"new", "qualified", "proposal", "won", "lost"}:
+    if payload.get("status") is not None and payload["status"] not in {"new", "qualified", "proposal", "won", "lost"}:
         raise HTTPException(422, "Invalid lead status")
-    if payload.get("contact_id"):
-        contact = await db.scalar(select(Contact).where(
-            Contact.id == payload["contact_id"], Contact.tenant_id == user.tenant_id))
-        if contact is None:
-            raise HTTPException(404, "Contact not found in this workspace")
+    if payload.get("contact_id") and await db.scalar(select(Contact.id).where(
+        Contact.id == payload["contact_id"], Contact.tenant_id == user.tenant_id)) is None:
+        raise HTTPException(404, "Contact not found in this workspace")
     for key, value in payload.items():
         setattr(lead, key, value)
     await db.commit()
