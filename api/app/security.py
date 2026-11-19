@@ -245,3 +245,22 @@ async def tenant_audit_events(
         "outcome": event.outcome, "detail": event.detail,
         "created_at": event.created_at.isoformat(),
     } for event in events]}
+
+
+@router.post("/credentials/{credential_id}/revoke", dependencies=[Depends(require_platform_admin)])
+async def revoke_api_key(
+    credential_id: str,
+    db: AsyncSession = Depends(get_security_db),
+) -> dict[str, Any]:
+    credential = await db.get(ApiCredential, credential_id)
+    if not credential:
+        raise HTTPException(status_code=404, detail="API credential not found.")
+    if credential.revoked:
+        return {"credential_id": credential.id, "revoked": True, "status": "already_revoked"}
+    credential.revoked = True
+    await _audit(
+        db, credential.organization_id, "platform-admin",
+        "api_key.revoked", "api_credential", credential.id,
+    )
+    await db.commit()
+    return {"credential_id": credential.id, "revoked": True, "status": "revoked"}
