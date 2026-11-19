@@ -1,9 +1,12 @@
-"""Shared SQLAlchemy engine for UNX2 API modules."""
-import os
+"""Shared SQLAlchemy engine and declarative metadata for all UNX2 modules."""
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://unx2:unx2_dev_only@postgres:5432/unx2",
-)
-engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+from .config import settings
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+engine = create_async_engine(settings.database_url, pool_pre_ping=True)
