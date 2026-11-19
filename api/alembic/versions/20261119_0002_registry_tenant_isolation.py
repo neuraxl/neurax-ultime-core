@@ -31,9 +31,10 @@ def _ensure_tenant_column(table):
         f'UPDATE "{table}" SET organization_id = :org WHERE organization_id IS NULL'
     ).bindparams(org=LEGACY_ORG_ID))
     op.alter_column(table, "organization_id", existing_type=sa.String(36), nullable=False)
-    fk_names = {item["name"] for item in sa.inspect(op.get_bind()).get_foreign_keys(table)}
+    foreign_keys = sa.inspect(op.get_bind()).get_foreign_keys(table)
+    has_org_fk = any(item.get("referred_table") == "unx2_organizations" and item.get("constrained_columns") == ["organization_id"] for item in foreign_keys)
     fk_name = f"fk_{table}_organization"
-    if fk_name not in fk_names:
+    if not has_org_fk:
         op.create_foreign_key(fk_name, table, "unx2_organizations", ["organization_id"], ["id"])
     index_name = f"ix_{table}_organization_id"
     if index_name not in _indexes(table):
