@@ -22,6 +22,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import JSON
 
 from .main import engine, settings
+from .security import TenantPrincipal, require_tenant
 
 router = APIRouter(prefix="/api/v1/open-source", tags=["open-source-registry"])
 
@@ -56,6 +57,7 @@ class Project(RegistryBase):
 class Connector(RegistryBase):
     __tablename__ = "unx2_os_connectors"
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("unx2_organizations.id"), index=True, nullable=False)
     project_id: Mapped[str] = mapped_column(ForeignKey("unx2_os_projects.id"), index=True)
     name: Mapped[str] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(30), default="api")
@@ -70,6 +72,7 @@ class Connector(RegistryBase):
 class AgentGrant(RegistryBase):
     __tablename__ = "unx2_os_agent_grants"
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("unx2_organizations.id"), index=True, nullable=False)
     agent_id: Mapped[str] = mapped_column(String(200), index=True)
     connector_id: Mapped[str] = mapped_column(String(255), ForeignKey("unx2_os_connectors.id"), index=True)
     tool_name: Mapped[str] = mapped_column(String(200))
@@ -81,6 +84,7 @@ class AgentGrant(RegistryBase):
 class IntegrationPlan(RegistryBase):
     __tablename__ = "unx2_os_integration_plans"
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("unx2_organizations.id"), index=True, nullable=False)
     connector_id: Mapped[str] = mapped_column(ForeignKey("unx2_os_connectors.id"), index=True)
     compose_yaml: Mapped[str] = mapped_column(Text)
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
@@ -91,17 +95,13 @@ class IntegrationPlan(RegistryBase):
 class UsageEvent(RegistryBase):
     __tablename__ = "unx2_os_usage_events"
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("unx2_organizations.id"), index=True, nullable=False)
     agent_id: Mapped[str] = mapped_column(String(200), index=True)
     connector_id: Mapped[str] = mapped_column(ForeignKey("unx2_os_connectors.id"), index=True)
     tool_name: Mapped[str] = mapped_column(String(200))
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     success: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-
-async def init_registry() -> None:
-    async with engine.begin() as connection:
-        await connection.run_sync(RegistryBase.metadata.create_all)
 
 
 async def get_db():
@@ -165,8 +165,8 @@ class UsageRequest(BaseModel):
     success: bool = False
 
 
-def _grant_id(agent_id: str, connector_id: str, tool_name: str) -> str:
-    raw = f"{agent_id}|{connector_id}|{tool_name}".encode("utf-8")
+def _grant_id(organization_id: str, agent_id: str, connector_id: str, tool_name: str) -> str:
+    raw = f"{organization_id}|{agent_id}|{connector_id}|{tool_name}".encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -285,16 +285,18 @@ async def catalog(q: str | None = None, min_score: int = 0, db: AsyncSession = D
     return {"count": len(rows), "items": [{"id":p.id,"repository":p.full_name,"url":p.repo_url,"description":p.description,"license":p.license_spdx,"version":p.latest_release,"stars":p.stars,"maturity_score":p.maturity_score,"features":p.features,"dependencies":p.dependencies,"status":p.status} for p in rows]}
 
 
-@router.post("/registry", dependencies=[Depends(require_admin)])
-async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+@router.post("/registry")
+async def register(payload: RegisterRequest, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     project = await db.get(Project, payload.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Discover the project before registering it.")
-    connector_id = f"connector:{payload.project_id}:{payload.kind}"
+    if principal.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Organization administrator role required.")
+    connector_id = f"connector:{principal.organization_id}:{payload.project_id}:{payload.kind}"
     existing = await db.get(Connector, connector_id)
     if existing:
         raise HTTPException(status_code=409, detail="A connector of this type is already registered for this project.")
-    item = Connector(id=connector_id, project_id=payload.project_id, name=payload.name, kind=payload.kind, version=payload.version or project.latest_release, endpoint=payload.endpoint, capabilities=payload.capabilities, permissions={"default": "deny"}, enabled=False)
+    item = Connector(id=connector_id, organization_id=principal.organization_id, project_id=payload.project_id, name=payload.name, kind=payload.kind, version=payload.version or project.latest_release, endpoint=payload.endpoint, capabilities=payload.capabilities, permissions={"default": "deny"}, enabled=False)
     db.add(item)
     project.status = "registered"
     await db.commit()
@@ -302,32 +304,36 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/registry")
-async def registry(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    rows = (await db.execute(select(Connector).order_by(Connector.created_at.desc()).limit(200))).scalars().all()
+async def registry(principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    rows = (await db.execute(select(Connector).where(Connector.organization_id == principal.organization_id).order_by(Connector.created_at.desc()).limit(200))).scalars().all()
     return {"count": len(rows), "items": [{"id":x.id,"project_id":x.project_id,"name":x.name,"kind":x.kind,"version":x.version,"endpoint":x.endpoint,"capabilities":x.capabilities,"enabled":x.enabled} for x in rows]}
 
 
-@router.post("/registry/{connector_id}/permissions", dependencies=[Depends(require_admin)])
-async def set_permissions(connector_id: str, payload: GrantRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    connector = await db.get(Connector, connector_id)
+@router.post("/registry/{connector_id}/permissions")
+async def set_permissions(connector_id: str, payload: GrantRequest, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    if principal.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Organization administrator role required.")
+    connector = await db.scalar(select(Connector).where(Connector.id == connector_id, Connector.organization_id == principal.organization_id))
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found.")
     changed = []
     for tool_name in payload.tool_names:
-        grant_id = _grant_id(payload.agent_id, connector_id, tool_name)
-        grant = await db.get(AgentGrant, grant_id)
+        grant_id = _grant_id(principal.organization_id, payload.agent_id, connector_id, tool_name)
+        grant = await db.scalar(select(AgentGrant).where(AgentGrant.id == grant_id, AgentGrant.organization_id == principal.organization_id))
         if grant:
             grant.allowed, grant.max_cost_usd = payload.allowed, payload.max_cost_usd
         else:
-            db.add(AgentGrant(id=grant_id, agent_id=payload.agent_id, connector_id=connector_id, tool_name=tool_name, allowed=payload.allowed, max_cost_usd=payload.max_cost_usd))
+            db.add(AgentGrant(id=grant_id, organization_id=principal.organization_id, agent_id=payload.agent_id, connector_id=connector_id, tool_name=tool_name, allowed=payload.allowed, max_cost_usd=payload.max_cost_usd))
         changed.append(tool_name)
     await db.commit()
     return {"agent_id": payload.agent_id, "connector_id": connector_id, "tools": changed, "allowed": payload.allowed, "max_cost_usd": payload.max_cost_usd}
 
 
-@router.post("/registry/{connector_id}/enable", dependencies=[Depends(require_admin)])
-async def toggle_connector(connector_id: str, payload: ConnectorToggleRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    connector = await db.get(Connector, connector_id)
+@router.post("/registry/{connector_id}/enable")
+async def toggle_connector(connector_id: str, payload: ConnectorToggleRequest, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    if principal.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Organization administrator role required.")
+    connector = await db.scalar(select(Connector).where(Connector.id == connector_id, Connector.organization_id == principal.organization_id))
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found.")
     connector.enabled = payload.enabled
@@ -336,15 +342,17 @@ async def toggle_connector(connector_id: str, payload: ConnectorToggleRequest, d
 
 
 @router.get("/agents/{agent_id}/tools")
-async def agent_tools(agent_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    result = await db.execute(select(AgentGrant, Connector).join(Connector, AgentGrant.connector_id == Connector.id).where(AgentGrant.agent_id == agent_id, AgentGrant.allowed.is_(True), Connector.enabled.is_(True)))
+async def agent_tools(agent_id: str, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    result = await db.execute(select(AgentGrant, Connector).join(Connector, AgentGrant.connector_id == Connector.id).where(AgentGrant.agent_id == agent_id, AgentGrant.organization_id == principal.organization_id, Connector.organization_id == principal.organization_id, AgentGrant.allowed.is_(True), Connector.enabled.is_(True)))
     items = [{"connector_id":g.connector_id,"connector":c.name,"kind":c.kind,"tool":g.tool_name,"max_cost_usd":g.max_cost_usd} for g,c in result.all()]
     return {"agent_id": agent_id, "count": len(items), "tools": items, "policy": "allow-list; disabled connectors are never exposed"}
 
 
-@router.post("/integrations/plan", dependencies=[Depends(require_admin)])
-async def create_integration_plan(payload: PlanRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    connector = await db.get(Connector, payload.connector_id)
+@router.post("/integrations/plan")
+async def create_integration_plan(payload: PlanRequest, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    if principal.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Organization administrator role required.")
+    connector = await db.scalar(select(Connector).where(Connector.id == payload.connector_id, Connector.organization_id == principal.organization_id))
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found.")
     if ":" not in payload.image or payload.image.endswith(":latest"):
@@ -355,23 +363,25 @@ async def create_integration_plan(payload: PlanRequest, db: AsyncSession = Depen
     compose = f"services:\n  {payload.service_name}:\n    image: {payload.image}\n    restart: unless-stopped\n    read_only: true\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    tmpfs:\n      - /tmp:rw,noexec,nosuid,size=64m{ports}\n"
     snapshot = {"connector_id": connector.id, "previous_enabled": connector.enabled, "compose_yaml": compose, "created_at": datetime.now(timezone.utc).isoformat()}
     plan_id = secrets.token_hex(16)
-    db.add(IntegrationPlan(id=plan_id, connector_id=connector.id, compose_yaml=compose, snapshot=snapshot, status="planned"))
+    db.add(IntegrationPlan(id=plan_id, organization_id=principal.organization_id, connector_id=connector.id, compose_yaml=compose, snapshot=snapshot, status="planned"))
     await db.commit()
     return {"plan_id": plan_id, "status": "planned", "compose_yaml": compose, "executed": False, "note": "Review and deploy manually. This API never starts containers or runs third-party code."}
 
 
-@router.post("/integrations/{plan_id}/test", dependencies=[Depends(require_admin)])
-async def test_integration_plan(plan_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    plan = await db.get(IntegrationPlan, plan_id)
+@router.post("/integrations/{plan_id}/test")
+async def test_integration_plan(plan_id: str, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    plan = await db.scalar(select(IntegrationPlan).where(IntegrationPlan.id == plan_id, IntegrationPlan.organization_id == principal.organization_id))
     if not plan:
         raise HTTPException(status_code=404, detail="Integration plan not found.")
-    checks = {"connector_exists": await db.get(Connector, plan.connector_id) is not None, "read_only_filesystem": "read_only: true" in plan.compose_yaml, "no_new_privileges": "no-new-privileges:true" in plan.compose_yaml, "drop_all_capabilities": "      - ALL" in plan.compose_yaml, "deployment_executed": False}
+    checks = {"connector_exists": await db.scalar(select(Connector.id).where(Connector.id == plan.connector_id, Connector.organization_id == principal.organization_id)) is not None, "read_only_filesystem": "read_only: true" in plan.compose_yaml, "no_new_privileges": "no-new-privileges:true" in plan.compose_yaml, "drop_all_capabilities": "      - ALL" in plan.compose_yaml, "deployment_executed": False}
     return {"plan_id": plan_id, "status": "validated" if all(v for k,v in checks.items() if k != "deployment_executed") else "needs_review", "checks": checks, "note": "Static validation only; live connectivity requires deployment in the target environment."}
 
 
-@router.post("/integrations/{plan_id}/rollback", dependencies=[Depends(require_admin)])
-async def rollback_plan(plan_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    plan = await db.get(IntegrationPlan, plan_id)
+@router.post("/integrations/{plan_id}/rollback")
+async def rollback_plan(plan_id: str, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    if principal.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Organization administrator role required.")
+    plan = await db.scalar(select(IntegrationPlan).where(IntegrationPlan.id == plan_id, IntegrationPlan.organization_id == principal.organization_id))
     if not plan:
         raise HTTPException(status_code=404, detail="Integration plan not found.")
     plan.status = "rolled_back"
@@ -380,21 +390,24 @@ async def rollback_plan(plan_id: str, db: AsyncSession = Depends(get_db)) -> dic
 
 
 @router.post("/orchestration/plan")
-async def orchestration_plan(payload: OrchestrationRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    result = await db.execute(select(AgentGrant, Connector).join(Connector, AgentGrant.connector_id == Connector.id).where(AgentGrant.agent_id == payload.agent_id, AgentGrant.allowed.is_(True), Connector.enabled.is_(True)))
+async def orchestration_plan(payload: OrchestrationRequest, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    result = await db.execute(select(AgentGrant, Connector).join(Connector, AgentGrant.connector_id == Connector.id).where(AgentGrant.agent_id == payload.agent_id, AgentGrant.organization_id == principal.organization_id, Connector.organization_id == principal.organization_id, AgentGrant.allowed.is_(True), Connector.enabled.is_(True)))
     tools = [{"connector_id":g.connector_id,"tool":g.tool_name,"max_cost_usd":g.max_cost_usd} for g,c in result.all()]
     return {"agent_id": payload.agent_id, "task": payload.task, "authorized_tools": tools, "estimated_cost_usd": payload.estimated_cost_usd, "within_budget": all(payload.estimated_cost_usd <= t["max_cost_usd"] for t in tools) if tools else False, "execution": "not_started", "note": "Planning and authorization lookup only; no agent runtime is invoked by this endpoint."}
 
 
-@router.post("/usage", dependencies=[Depends(require_admin)])
-async def record_usage(payload: UsageRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
-    grant_id = _grant_id(payload.agent_id, payload.connector_id, payload.tool_name)
-    grant = await db.get(AgentGrant, grant_id)
+@router.post("/usage")
+async def record_usage(payload: UsageRequest, principal: TenantPrincipal = Depends(require_tenant), db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    grant_id = _grant_id(principal.organization_id, payload.agent_id, payload.connector_id, payload.tool_name)
+    grant = await db.scalar(select(AgentGrant).where(AgentGrant.id == grant_id, AgentGrant.organization_id == principal.organization_id))
     if not grant or not grant.allowed:
         raise HTTPException(status_code=403, detail="No active grant for this agent/tool combination.")
     if payload.cost_usd > grant.max_cost_usd:
         raise HTTPException(status_code=402, detail="Reported usage exceeds the configured per-call cost ceiling.")
-    event = UsageEvent(id=secrets.token_hex(16), agent_id=payload.agent_id, connector_id=payload.connector_id, tool_name=payload.tool_name, cost_usd=payload.cost_usd, success=payload.success)
+    connector = await db.scalar(select(Connector).where(Connector.id == payload.connector_id, Connector.organization_id == principal.organization_id))
+    if not connector:
+        raise HTTPException(status_code=404, detail="Connector not found.")
+    event = UsageEvent(id=secrets.token_hex(16), organization_id=principal.organization_id, agent_id=payload.agent_id, connector_id=payload.connector_id, tool_name=payload.tool_name, cost_usd=payload.cost_usd, success=payload.success)
     db.add(event)
     await db.commit()
     return {"recorded": True, "cost_usd": payload.cost_usd, "success": payload.success}
