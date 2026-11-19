@@ -192,6 +192,7 @@ async def create_api_key(
         expires_at=(datetime.now(timezone.utc) + timedelta(days=payload.expires_in_days)) if payload.expires_in_days else None,
     )
     db.add(credential)
+    db.add(Membership(id=str(uuid4()), organization_id=organization.id, principal_id=credential.id, role=payload.role))
     await _audit(db, organization.id, "platform-admin", "api_key.created", "api_credential", credential.id, f"role={payload.role}; label={payload.label}")
     await db.commit()
     return {
