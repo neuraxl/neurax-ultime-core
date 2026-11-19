@@ -18,16 +18,17 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
-from .main import engine, settings
+from .database import Base, engine
+from .config import settings
 from .security import TenantPrincipal, require_tenant
 
 router = APIRouter(prefix="/api/v1/open-source", tags=["open-source-registry"])
 
 
-class RegistryBase(DeclarativeBase):
+class RegistryBase(Base):
     pass
 
 
