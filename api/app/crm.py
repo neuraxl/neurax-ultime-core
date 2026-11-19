@@ -117,6 +117,8 @@ async def update_contact(contact_id: str, data: ContactPatch, db: Db, user: Acto
     if c is None:
         raise HTTPException(404, "Contact not found")
     payload = data.model_dump(exclude_unset=True)
+    if "first_name" in payload and payload["first_name"] is None:
+        raise HTTPException(422, "first_name cannot be null")
     if payload.get("email"):
         payload["email"] = str(payload["email"])
     for key, value in payload.items():
@@ -165,8 +167,12 @@ async def update_lead(lead_id: str, data: LeadPatch, db: Db, user: Actor):
     if lead is None:
         raise HTTPException(404, "Lead not found")
     payload = data.model_dump(exclude_unset=True)
-    if payload.get("status") is not None and payload["status"] not in {"new", "qualified", "proposal", "won", "lost"}:
+    if "title" in payload and payload["title"] is None:
+        raise HTTPException(422, "title cannot be null")
+    if "status" in payload and payload["status"] not in {"new", "qualified", "proposal", "won", "lost"}:
         raise HTTPException(422, "Invalid lead status")
+    if "value_cents" in payload and payload["value_cents"] is None:
+        raise HTTPException(422, "value_cents cannot be null")
     if payload.get("contact_id") and await db.scalar(select(Contact.id).where(
         Contact.id == payload["contact_id"], Contact.tenant_id == user.tenant_id)) is None:
         raise HTTPException(404, "Contact not found in this workspace")
