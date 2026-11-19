@@ -91,3 +91,37 @@ The migration creates new tenant-security tables only; it does not drop or rewri
 4. Save the returned API key securely; its secret cannot be retrieved again.
 
 **Important implementation boundary:** this is the tenant identity and audit foundation, not yet full registry data isolation. Existing Open Source Registry endpoints still use the platform-wide data model and legacy admin-token protection. Do not expose those endpoints to tenant clients until connector, grant, integration-plan, and usage queries are migrated to organization-scoped access controls. The existing MQTT broker, port 1883, and topics remain unchanged.
+
+
+## Multi-tenant registry isolation (v0.3.1)
+
+- Projects discovered from public GitHub remain a shared public catalogue.
+- Connectors, agent grants, integration plans, and usage events carry an organization ID.
+- Tenant routes require a Bearer tenant API key. Connector, grant, plan, agent-tool, orchestration, and usage queries are constrained to the authenticated organization.
+- Connector registration, permission changes, enable/disable, plan creation, and rollback require owner/admin role.
+- Attempts to access another organization's connector or plan return not found, avoiding resource-existence disclosure.
+- Legacy connector/grant/plan/usage rows are assigned to a dedicated quarantined legacy organization during migration. They are not visible to newly provisioned tenants.
+
+### Controlled database migration
+
+The API no longer runs SQLAlchemy `create_all` automatically at startup. Apply schema changes explicitly after taking a PostgreSQL backup:
+
+```bash
+docker compose up -d postgres
+docker compose --profile migrate run --rm api-migrate
+docker compose up -d api
+```
+
+The migration is forward-only by design. It adopts existing registry tables in place, adds organization ownership, and does not delete registry rows. Review the migration and verify the backup before running it against a valuable database.
+
+### Tenant isolation test
+
+```bash
+cd api
+pip install -r requirements-dev.txt
+pytest -q tests
+```
+
+The test provisions two independent tenant credentials, confirms each tenant sees only its own connector, and confirms a guessed foreign connector ID cannot be changed or exposed through agent tools.
+
+MQTT is untouched: Aedes, `server/broker.js`, port 1883, and existing topics are preserved.
