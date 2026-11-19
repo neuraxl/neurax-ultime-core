@@ -28,8 +28,7 @@ from .security import TenantPrincipal, require_tenant
 router = APIRouter(prefix="/api/v1/open-source", tags=["open-source-registry"])
 
 
-class RegistryBase(Base):
-    pass
+RegistryBase = Base
 
 
 class Project(RegistryBase):
