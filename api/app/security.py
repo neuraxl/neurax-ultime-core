@@ -25,8 +25,7 @@ from .config import settings
 router = APIRouter(prefix="/api/v1/security", tags=["security-tenant-gateway"])
 
 
-class SecurityBase(Base):
-    pass
+SecurityBase = Base
 
 
 class Organization(SecurityBase):
