@@ -18,6 +18,9 @@ jobs:
         run: pip install -r api/requirements.txt
       - name: Compile API modules
         run: python -m compileall -q api/app
-      - name: Import FastAPI application
+      - name: Import FastAPI application and verify tenant routes
         working-directory: api
-        run: python -c "from app.main import app; print(app.title)"
+        run: python -c "from app.main import app; assert '/api/v1/security/me' in app.openapi()['paths']; print(app.title)"
+      - name: Validate Alembic migration graph
+        working-directory: api
+        run: alembic history
