@@ -18,6 +18,8 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-unx2}:${POSTGRES_PASSWORD:-unx2_dev_only}@postgres:5432/${POSTGRES_DB:-unx2}
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: ${ENVIRONMENT:-development}
+      JWT_SECRET: ${JWT_SECRET:-INSECURE_DEVELOPMENT_SECRET_CHANGE_THIS}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
     depends_on:
       postgres:
         condition: service_healthy
