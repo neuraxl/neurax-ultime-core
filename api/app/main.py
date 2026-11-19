@@ -18,8 +18,6 @@ redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    from .open_source_registry import init_registry
-    await init_registry()
     yield
     await engine.dispose()
     await redis_client.aclose()
