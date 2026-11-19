@@ -36,6 +36,10 @@ Health checks:
 
 MQTT remains available separately on port 1883.
 
+## CRM interface
+
+The responsive French-language workspace is served at `/` and includes sign-in / workspace registration, KPI dashboard, prospect pipeline, contacts directory, lead editing, and activity tracking. It calls the authenticated UNX2 API directly; the access token is held in browser session storage and cleared on logout.
+
 ## API routes
 
 - `POST /api/v1/auth/register`
