@@ -2,8 +2,8 @@
 
 Tenant API keys are returned once, stored only as SHA-256 hashes, and mapped to
 an organization and role. This module establishes tenant identity and audit
-primitives; registry data-plane routes are not declared tenant-isolated until
-their queries are explicitly scoped in the next integration step.
+primitives used by the organization-scoped registry routes. Registry reads and writes
+are constrained by the authenticated tenant and role.
 """
 from __future__ import annotations
 
