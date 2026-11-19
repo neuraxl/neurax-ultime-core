@@ -19,7 +19,8 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from .main import engine, settings
+from .database import engine
+import os
 
 router = APIRouter(prefix="/api/v1/security", tags=["security-tenant-gateway"])
 
@@ -81,7 +82,7 @@ async def get_security_db():
 
 
 def _admin_check(token: str | None) -> None:
-    expected = getattr(settings, "os_registry_admin_token", None)
+    expected = os.getenv("OS_REGISTRY_ADMIN_TOKEN")
     if not expected or expected == "CHANGE_ME_TO_A_LONG_RANDOM_SECRET":
         raise HTTPException(status_code=503, detail="Administrative provisioning is disabled until OS_REGISTRY_ADMIN_TOKEN is configured.")
     if not token or not secrets.compare_digest(token, expected):
