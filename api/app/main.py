@@ -2,26 +2,24 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+
+from .auth import router as auth_router
+from .crm import router as crm_router
+from .db import engine
+from .main_config import settings
+from .models import Base
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = "postgresql+psycopg://unx2:unx2_dev_only@postgres:5432/unx2"
-    redis_url: str = "redis://redis:6379/0"
-    environment: str = "development"
-
-
-settings = Settings()
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # MVP bootstrap. Replace with versioned Alembic migrations before production.
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
     await redis_client.aclose()
@@ -29,10 +27,12 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="UNX2 Core API",
-    version="0.1.0",
-    description="Additive API service for UNX2. Existing MQTT broker remains a separate service.",
+    version="0.2.0",
+    description="UNX2 shared API with tenant-scoped EMOTION FACTORY CRM. MQTT remains independent.",
     lifespan=lifespan,
 )
+app.include_router(auth_router)
+app.include_router(crm_router)
 
 
 @app.get("/health/live", tags=["health"])
@@ -64,6 +64,6 @@ async def readiness() -> dict[str, Any]:
 async def modules() -> dict[str, Any]:
     return {
         "platform": "UNX2",
-        "modules": [{"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"}],
-        "note": "CRM and commercial actions remain disabled until tenant authentication, authorization, audit logging, and migrations are implemented.",
+        "modules": [{"id": "emotion-factory", "name": "EMOTION FACTORY",
+                     "status": "crm-mvp", "tenant_isolated": True}],
     }
