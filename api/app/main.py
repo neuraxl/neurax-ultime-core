@@ -2,10 +2,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
+
+from .skills import router as skills_router
 
 
 class Settings(BaseSettings):
@@ -13,6 +16,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://unx2:unx2_dev_only@postgres:5432/unx2"
     redis_url: str = "redis://redis:6379/0"
     environment: str = "development"
+    cors_origins: str = "http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000"
 
 
 settings = Settings()
@@ -21,7 +25,8 @@ redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(application: FastAPI):
+    application.state.redis = redis_client
     yield
     await engine.dispose()
     await redis_client.aclose()
@@ -29,10 +34,20 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="UNX2 Core API",
-    version="0.1.0",
-    description="Additive API service for UNX2. Existing MQTT broker remains a separate service.",
+    version="0.2.0",
+    description="UNX2 core API with additive LÉVIATHAN Skill Runtime. Existing MQTT broker remains a separate service.",
     lifespan=lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+app.include_router(skills_router)
 
 
 @app.get("/health/live", tags=["health"])
@@ -64,6 +79,9 @@ async def readiness() -> dict[str, Any]:
 async def modules() -> dict[str, Any]:
     return {
         "platform": "UNX2",
-        "modules": [{"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"}],
-        "note": "CRM and commercial actions remain disabled until tenant authentication, authorization, audit logging, and migrations are implemented.",
+        "modules": [
+            {"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"},
+            {"id": "leviathan-skill-runtime", "name": "LÉVIATHAN Skill Runtime", "status": "planning_only"},
+        ],
+        "note": "Skill routing is enabled; agent execution remains disabled until authentication, authorization, tenant isolation, audit logging, and migrations are implemented.",
     }
