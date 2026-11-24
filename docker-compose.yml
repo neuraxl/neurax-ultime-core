@@ -20,7 +20,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       UNX2_API_KEY: ${UNX2_API_KEY:?Set UNX2_API_KEY in .env}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6.2-astra}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6.1-terra}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5-5}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
