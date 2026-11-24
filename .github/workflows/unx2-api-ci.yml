@@ -20,6 +20,7 @@ jobs:
       UNX2_API_KEY: ""
       DATABASE_URL: "postgresql+psycopg://unx2:test-only@localhost:5432/unx2"
       REDIS_URL: "redis://localhost:6379/0"
+      PYTHONPATH: "."
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
