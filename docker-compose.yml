@@ -6,7 +6,7 @@ services:
     container_name: unx2-mqtt
     restart: unless-stopped
     ports:
-      - "${MQTT_PORT:-1883}:1883"
+      - "127.0.0.1:${MQTT_PORT:-1883}:1883"
 
   api:
     build:
@@ -15,16 +15,25 @@ services:
     container_name: unx2-api
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-unx2}:${POSTGRES_PASSWORD:-unx2_dev_only}@postgres:5432/${POSTGRES_DB:-unx2}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-unx2}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-unx2}
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: ${ENVIRONMENT:-development}
+      UNX2_API_KEY: ${UNX2_API_KEY:?Set UNX2_API_KEY in .env}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-5}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      ARBITER_PROVIDER: ${ARBITER_PROVIDER:-openai}
+      PROVIDER_TIMEOUT_SECONDS: ${PROVIDER_TIMEOUT_SECONDS:-45}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
 
   postgres:
     image: postgres:16-alpine
@@ -33,7 +42,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-unx2}
       POSTGRES_USER: ${POSTGRES_USER:-unx2}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-unx2_dev_only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - unx2_postgres_data:/var/lib/postgresql/data
     healthcheck:
