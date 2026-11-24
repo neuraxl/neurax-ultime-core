@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -10,16 +9,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from .ai_schemas import CompareRequest, CompareResponse
 from .orchestrator import compare
 from .security import require_api_key
+from .settings import settings
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    database_url: str = "postgresql+psycopg://unx2:unx2_dev_only@postgres:5432/unx2"
-    redis_url: str = "redis://redis:6379/0"
-    environment: str = "development"
-
-
-settings = Settings()
 engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
