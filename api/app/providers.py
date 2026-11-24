@@ -89,12 +89,14 @@ async def generate(provider: str, prompt: str, max_tokens: int) -> ModelReply:
                         "model": model,
                         "input": prompt,
                         "store": False,
-                        "generation_config": {"max_output_tokens": max_tokens},
+                        "generation_config": {"max_output_tokens": max_tokens, "thinking_level": "low"},
                     },
                 )
                 response.raise_for_status()
                 data = response.json()
-                content = "\\n".join(
+                if data.get("status") != "completed":
+                    raise ProviderRequestError(f"gemini interaction ended with status {data.get('status', 'unknown')}.")
+                content = "\n".join(
                     part.get("text", "")
                     for step in data.get("steps", [])
                     if step.get("type") == "model_output"
