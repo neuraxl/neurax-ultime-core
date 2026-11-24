@@ -51,7 +51,7 @@ async def generate(provider: str, prompt: str, max_tokens: int) -> ModelReply:
                     json={
                         "model": model,
                         "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": max_tokens,
+                        "max_completion_tokens": max_tokens,
                     },
                 )
                 response.raise_for_status()
@@ -83,23 +83,27 @@ async def generate(provider: str, prompt: str, max_tokens: int) -> ModelReply:
                 input_tokens, output_tokens = usage.get("input_tokens"), usage.get("output_tokens")
             else:
                 response = await client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/interactions",
                     headers={"x-goog-api-key": key},
                     json={
-                        "contents": [{"parts": [{"text": prompt}]}],
-                        "generationConfig": {"maxOutputTokens": max_tokens},
+                        "model": model,
+                        "input": prompt,
+                        "store": False,
+                        "generation_config": {"max_output_tokens": max_tokens},
                     },
                 )
                 response.raise_for_status()
                 data = response.json()
-                content = "\n".join(
+                content = "\\n".join(
                     part.get("text", "")
-                    for candidate in data.get("candidates", [])
-                    for part in candidate.get("content", {}).get("parts", [])
+                    for step in data.get("steps", [])
+                    if step.get("type") == "model_output"
+                    for part in step.get("content", [])
+                    if part.get("type") == "text"
                 )
-                usage = data.get("usageMetadata", {})
-                input_tokens = usage.get("promptTokenCount")
-                output_tokens = usage.get("candidatesTokenCount")
+                usage = data.get("usage", {})
+                input_tokens = usage.get("total_input_tokens")
+                output_tokens = usage.get("total_output_tokens")
         if not content:
             raise ProviderRequestError(f"{provider} returned an empty response.")
         return ModelReply(
