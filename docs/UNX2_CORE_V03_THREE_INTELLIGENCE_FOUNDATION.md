@@ -8,7 +8,8 @@ This is a first integration slice, not a production-ready multi-tenant platform.
 
 ## Implemented in this branch
 
-- Provider adapters using the official HTTPS API endpoints.
+- Provider adapters using current official HTTPS API endpoints: OpenAI Responses API, Anthropic Messages API, and Google Gemini Interactions API.
+- Default model IDs are configuration values and can be replaced per environment: GPT `gpt-6.1-terra`, Claude `claude-sonnet-5-5`, Gemini `gemini-3.8-flash`.
 - Server-side API keys only; no provider key is accepted from request bodies.
 - Bearer authentication for the compare endpoint using a high-entropy shared service key.
 - Constant-time credential comparison and fail-closed behavior when the service key is absent or shorter than 32 characters.
