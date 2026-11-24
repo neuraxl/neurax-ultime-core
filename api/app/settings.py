@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     unx2_api_key: str = ""
 
     openai_api_key: str = ""
-    openai_model: str = "gpt-6.2-astra"
+    openai_model: str = "gpt-6.1-terra"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-5-5"
     gemini_api_key: str = ""
