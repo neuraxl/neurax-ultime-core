@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
+
+from .ai_schemas import CompareRequest, CompareResponse
+from .orchestrator import compare
+from .security import require_api_key
 
 
 class Settings(BaseSettings):
@@ -29,8 +33,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="UNX2 Core API",
-    version="0.1.0",
-    description="Additive API service for UNX2. Existing MQTT broker remains a separate service.",
+    version="0.3.0",
+    description="LÉVIATHAN secure gateway for three real model providers.",
     lifespan=lifespan,
 )
 
@@ -60,10 +64,25 @@ async def readiness() -> dict[str, Any]:
     return {"status": status, "checks": checks}
 
 
+@app.post(
+    "/api/v1/ai/compare",
+    response_model=CompareResponse,
+    tags=["ai"],
+    summary="Query GPT, Claude and Gemini, then run a Meta-Arbiter pass",
+)
+async def compare_three_intelligences(
+    request: CompareRequest,
+    _: str = Depends(require_api_key),
+) -> CompareResponse:
+    return await compare(request)
+
+
 @app.get("/api/v1/modules", tags=["modules"])
 async def modules() -> dict[str, Any]:
     return {
         "platform": "UNX2",
-        "modules": [{"id": "emotion-factory", "name": "EMOTION FACTORY", "status": "foundation"}],
-        "note": "CRM and commercial actions remain disabled until tenant authentication, authorization, audit logging, and migrations are implemented.",
+        "modules": [
+            {"id": "leviathan-core", "name": "LÉVIATHAN CORE", "status": "three-provider-foundation"}
+        ],
+        "note": "Tenant identity, per-user authorization, durable audit storage, and production rate limits are not yet implemented. Do not expose this API publicly before those gates are complete.",
     }
