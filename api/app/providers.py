@@ -46,19 +46,30 @@ async def generate(provider: str, prompt: str, max_tokens: int) -> ModelReply:
         async with httpx.AsyncClient(timeout=timeout) as client:
             if provider == "openai":
                 response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
+                    "https://api.openai.com/v1/responses",
                     headers={"Authorization": f"Bearer {key}"},
                     json={
                         "model": model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "max_completion_tokens": max_tokens,
+                        "input": prompt,
+                        "max_output_tokens": max_tokens,
+                        "store": False,
                     },
                 )
                 response.raise_for_status()
                 data = response.json()
-                content = data["choices"][0]["message"]["content"]
+                if data.get("status") != "completed":
+                    raise ProviderRequestError(
+                        f"openai response ended with status {data.get('status', 'unknown')}."
+                    )
+                content = "\n".join(
+                    part.get("text", "")
+                    for item in data.get("output", [])
+                    if item.get("type") == "message"
+                    for part in item.get("content", [])
+                    if part.get("type") == "output_text"
+                )
                 usage = data.get("usage", {})
-                input_tokens, output_tokens = usage.get("prompt_tokens"), usage.get("completion_tokens")
+                input_tokens, output_tokens = usage.get("input_tokens"), usage.get("output_tokens")
             elif provider == "claude":
                 response = await client.post(
                     "https://api.anthropic.com/v1/messages",
