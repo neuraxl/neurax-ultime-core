@@ -25,14 +25,32 @@ def test_rejects_config_outside_managed_root(tmp_path):
     outside.write_text("[intelligence]\n", encoding="utf-8")
     instance = AssistantInstance("a1", "t1", "A1", str(outside))
 
-    with pytest.raises(ValueError, match="inside UNX2 config root"):
+    with pytest.raises(ValueError, match="tenant/instance directory"):
         OpenJarvisRuntimeFactory(root)._validate_instance(instance)
+
+
+def test_rejects_another_tenants_config_even_inside_managed_root(tmp_path):
+    root = tmp_path / "managed"
+    root.mkdir()
+    other_tenant = _instance(root, tenant="tenant-b")
+    claimed_instance = AssistantInstance(
+        instance_id="assistant-a",
+        tenant_id="tenant-a",
+        display_name="Claimed assistant",
+        config_path=other_tenant.config_path,
+    )
+
+    with pytest.raises(ValueError, match="tenant/instance directory"):
+        OpenJarvisRuntimeFactory(root)._validate_instance(claimed_instance)
 
 
 def test_rejects_missing_config(tmp_path):
     root = tmp_path / "managed"
     root.mkdir()
-    instance = AssistantInstance("a1", "t1", "A1", str(root / "missing.toml"))
+    instance = AssistantInstance(
+        "assistant-a", "tenant-a", "A1",
+        str(root / "tenant-a" / "assistant-a" / "config.toml"),
+    )
 
     with pytest.raises(FileNotFoundError):
         OpenJarvisRuntimeFactory(root).create(instance)
