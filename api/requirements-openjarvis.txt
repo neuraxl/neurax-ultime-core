@@ -1,0 +1,3 @@
+# OpenJarvis SDK pinned to an immutable upstream commit for reproducibility.
+# Upstream is Apache-2.0; see integrations/openjarvis/README.md and NOTICE.
+openjarvis @ git+https://github.com/open-jarvis/OpenJarvis.git@86f75ef7faeeb2b022a6621716d88c57ba105db0
