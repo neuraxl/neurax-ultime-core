@@ -1,10 +1,8 @@
 """Narrow OpenJarvis SDK adapter.
 
-The factory deliberately requires a tenant-provisioned config path. It never
-uses the process-wide default config, which could leak memory/configuration
-between logical tenants.
+The factory requires a tenant- and instance-scoped config path. It never uses
+process-wide defaults or another tenant's configuration.
 """
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,8 +21,7 @@ class OpenJarvisRuntime:
         self._client = client
 
     def ask(self, prompt: str) -> str:
-        result = self._client.ask(prompt)
-        return str(result)
+        return str(self._client.ask(prompt))
 
     def close(self) -> None:
         close = getattr(self._client, "close", None)
@@ -41,11 +38,23 @@ class OpenJarvisRuntimeFactory:
     def _validate_instance(self, instance: AssistantInstance) -> Path:
         if not instance.tenant_id or not instance.instance_id:
             raise ValueError("tenant_id and instance_id are required")
-        candidate = Path(instance.config_path).expanduser().resolve()
+
+        # Resolve the expected tenant/instance directory independently. This
+        # prevents a valid path under the global root from pointing at a
+        # different tenant's config.
+        expected_dir = (
+            self._config_root / instance.tenant_id / instance.instance_id
+        ).resolve()
         try:
-            candidate.relative_to(self._config_root)
+            expected_dir.relative_to(self._config_root)
         except ValueError as exc:
-            raise ValueError("assistant config path must stay inside UNX2 config root") from exc
+            raise ValueError("tenant and instance IDs must be safe path segments") from exc
+
+        candidate = Path(instance.config_path).expanduser().resolve()
+        if candidate.parent != expected_dir or candidate.name != "config.toml":
+            raise ValueError(
+                "assistant config must be config.toml inside its tenant/instance directory"
+            )
         if not candidate.is_file():
             raise FileNotFoundError("assistant config has not been provisioned")
         return candidate
